@@ -36,7 +36,8 @@ public class BuildInfoTest extends AbstractMojoTestCase {
 
     InputStream in = null;
     try {
-      Manifest manifest = new Manifest(new FileInputStream(manifestFile));
+      in = new FileInputStream(manifestFile);
+      Manifest manifest = new Manifest(in);
       assertManifest(manifest, "BuildInfo-User", System.getProperty("user.name"));
       assertManifest(manifest, "foo", "bar");
     } finally {
