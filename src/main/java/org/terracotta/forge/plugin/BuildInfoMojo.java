@@ -39,6 +39,7 @@ public class BuildInfoMojo extends AbstractMojo {
    * @parameter expression="${manifest.file}" default-value="${project.build.directory}/MANIFEST.MF"
    */
   private File manifestFile;
+
   /**
    * project instance. Injected automtically by Maven
    *
@@ -72,7 +73,6 @@ public class BuildInfoMojo extends AbstractMojo {
       manifest.write(out);
       out.flush();
     } catch (IOException ex) {
-      getLog().error(ex);
       throw new MojoExecutionException("Failed to write out manifest file", ex);
     } finally {
       IOUtils.closeQuietly(out);
@@ -88,7 +88,6 @@ public class BuildInfoMojo extends AbstractMojo {
         Manifest existingManifest = new Manifest(in);
         manifest = new Manifest(existingManifest);
       } catch (IOException ex) {
-        getLog().error(ex);
         throw new MojoExecutionException("Failed to read existing manifest", ex);
       } finally {
         IOUtils.closeQuietly(in);
@@ -97,8 +96,10 @@ public class BuildInfoMojo extends AbstractMojo {
     return manifest;
   }
 
-  private void  addExtraManifestEntries(Attributes attributes) {
-    if (manifestEntries == null) return;
+  private void addExtraManifestEntries(Attributes attributes) {
+    if (manifestEntries == null) {
+      return;
+    }
     for (Map.Entry<String, String> entry : manifestEntries.entrySet()) {
       attributes.putValue(entry.getKey(), entry.getValue());
     }
@@ -118,10 +119,9 @@ public class BuildInfoMojo extends AbstractMojo {
     try {
       host = InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {
-      if (getLog().isErrorEnabled()) {
-        getLog().error("Exception while finding host name", e);
-      }
+      getLog().warn("Exception while finding host name", e);
     }
+
     attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
     attributes.putValue(BUILDINFO + "User", user);
     attributes.putValue(BUILDINFO + "Host", host);

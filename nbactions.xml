@@ -2,7 +2,7 @@
 <actions>
         <action>
             <actionName>build-with-dependencies</actionName>
-            <basedir>..</basedir>
+            <basedir>.</basedir>
             <reactor>also-make</reactor>
             <goals>
                 <goal>install</goal>
