@@ -79,6 +79,7 @@
     <snapshotRepository>
       <id>terracotta-snapshots</id>
       <name>terracotta-snapshots</name>
+      <uniqueVersion>false</uniqueVersion>
       <url>http://nexus:8080/content/repositories/terracotta-snapshots</url>
     </snapshotRepository>
   </distributionManagement>
