@@ -69,4 +69,17 @@
       </plugin>
     </plugins>
   </build>
+
+  <distributionManagement>
+    <repository>
+      <id>terracotta-releases</id>
+      <name>terracotta-releases</name>
+      <url>http://nexus:8080/content/repositories/terracotta-releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>terracotta-snapshots</id>
+      <name>terracotta-snapshots</name>
+      <url>http://nexus:8080/content/repositories/terracotta-snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
 </project>
