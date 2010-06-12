@@ -27,13 +27,12 @@ import org.apache.maven.project.MavenProject;
 import org.terracotta.forge.plugin.util.Util;
 
 /**
- * Mojo to add build info (ie, timestamp, revision, url, etc.) to manifest
+ * Mojo to create manifest with build info (ie, timestamp, revision, url, etc.)
  * @author hhuynh
  *
- * @goal buildinfo
- * @phase prepare-package
+ * @goal manifest
  */
-public class BuildInfoMojo extends AbstractMojo {
+public class ManifestMojo extends AbstractMojo {
 
   /**
    * @parameter expression="${manifest.file}" default-value="${project.build.directory}/MANIFEST.MF"

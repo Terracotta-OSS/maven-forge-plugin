@@ -19,7 +19,7 @@ import org.junit.Test;
  *
  * @author hhuynh
  */
-public class BuildInfoTest extends AbstractMojoTestCase {
+public class ManifestMojoTest extends AbstractMojoTestCase {
 
   @Test
   public void testBuildInfo() throws Exception {
@@ -27,12 +27,12 @@ public class BuildInfoTest extends AbstractMojoTestCase {
     Map<String, String> manifestEntries = new HashMap<String, String>();
     manifestEntries.put("foo", "bar");
     
-    BuildInfoMojo buildInfoMojo = new BuildInfoMojo();
+    ManifestMojo ManifestMojo = new ManifestMojo();
     MavenProjectStub project = new MavenProjectStub();
-    setVariableValueToObject(buildInfoMojo, "project", project);
-    setVariableValueToObject(buildInfoMojo, "manifestFile", manifestFile);
-    setVariableValueToObject(buildInfoMojo, "manifestEntries", manifestEntries);
-    buildInfoMojo.execute();
+    setVariableValueToObject(ManifestMojo, "project", project);
+    setVariableValueToObject(ManifestMojo, "manifestFile", manifestFile);
+    setVariableValueToObject(ManifestMojo, "manifestEntries", manifestEntries);
+    ManifestMojo.execute();
 
     InputStream in = null;
     try {
