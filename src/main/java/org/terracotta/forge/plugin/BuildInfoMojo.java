@@ -31,7 +31,7 @@ import org.terracotta.forge.plugin.util.Util;
  * "build.timpestamp"
  * 
  * @author hhuynh
- * @goal svninfo
+ * @goal buildinfo
  */
 public class BuildInfoMojo extends AbstractMojo {
 	private static final String UNKNOWN = "unknown";
