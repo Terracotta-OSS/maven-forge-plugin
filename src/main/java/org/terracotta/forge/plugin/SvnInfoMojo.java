@@ -5,6 +5,7 @@
 package org.terracotta.forge.plugin;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 
@@ -37,9 +38,9 @@ public class SvnInfoMojo extends AbstractMojo {
 	protected MavenProject project;
 
 	/**
-	 * @parameter expression="${path}
+	 * @parameter expression="${rootPath}
 	 */
-	private String path;
+	private String rootPath;
 
 	/**
    * 
@@ -48,15 +49,12 @@ public class SvnInfoMojo extends AbstractMojo {
 		String svnUrl = "unknown";
 		String revision = "unknown";
 		
-		if (path == null) {
-			path = project.getBasedir().getAbsolutePath();
+		if (rootPath == null) {
+			rootPath = project.getBasedir().getAbsolutePath();
 		}
 		
-		getLog().info("Running: svn info " + path);
-		
 		try {
-			String svnInfo = Util.getSvnInfo(project.getBasedir()
-					.getAbsolutePath());
+			String svnInfo = Util.getSvnInfo(new File(rootPath).getCanonicalPath());
 			getLog().debug("SVN INFO: " + svnInfo);
 			BufferedReader br = new BufferedReader(new StringReader(svnInfo));
 			String line = null;
