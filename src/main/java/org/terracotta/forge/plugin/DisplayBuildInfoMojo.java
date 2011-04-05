@@ -30,7 +30,7 @@ import org.apache.maven.project.MavenProject;
 public class DisplayBuildInfoMojo extends AbstractMojo {
 
   /**
-   * project instance. Injected automtically by Maven
+   * project instance. Injected automatically by Maven
    *
    * @parameter expression="${project}"
    * @required
@@ -58,7 +58,7 @@ public class DisplayBuildInfoMojo extends AbstractMojo {
   }
 
   private Set<String> parseIncludesGroupIds() {
-    if (includes == null || includes.isEmpty()) {
+    if (includes == null || includes.equals("")) {
       return Collections.EMPTY_SET;
     }
     return new TreeSet(Arrays.asList(includes.trim().split("\\s*,\\s*")));
