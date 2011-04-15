@@ -81,10 +81,9 @@ public class BuildInfoMojo extends AbstractMojo {
 		getLog().debug("Setting build.revision to " + revision);
 		getLog().debug("Setting build.svn.url to " + svnUrl);
 		
-		System.setProperty("build.revision", revision);
-		System.setProperty("build.svn.url", svnUrl);
 		project.getProperties().setProperty("build.revision", revision);
 		project.getProperties().setProperty("build.svn.url", svnUrl);
+		project.getProperties().setProperty("build.branch", guessBranchOrTagFromUrl(svnUrl));
 		
 		String host = UNKNOWN;
 		String user = System.getProperty("user.name", UNKNOWN);
@@ -96,11 +95,29 @@ public class BuildInfoMojo extends AbstractMojo {
 			getLog().warn("Exception while finding host name", e);
 		}
 
-		System.setProperty("build.user", user);
-		System.setProperty("build.host", host);
-		System.setProperty("build.timestamp", timestamp);
 		project.getProperties().setProperty("build.user", user);
 		project.getProperties().setProperty("build.host", host);
 		project.getProperties().setProperty("build.timestamp", timestamp);
+	}
+	
+	private String guessBranchOrTagFromUrl(String url) {
+		if (url.contains("trunk")) return "trunk";
+		int startIndex = url.indexOf("branches/");
+		if (startIndex > 0) {
+			int endIndex = url.indexOf("/", startIndex + 9);
+			if (endIndex < 0) {
+				endIndex = url.length() - 1;
+			}
+			return url.substring(startIndex + 9, endIndex);
+		}
+		startIndex = url.indexOf("tags/");
+		if (startIndex > 0) {
+			int endIndex = url.indexOf("/", startIndex + 5);
+			if (endIndex < 0) {
+				endIndex = url.length() - 1;
+			}			
+			return url.substring(startIndex + 5, endIndex);
+		}
+		return "unknown";
 	}
 }
