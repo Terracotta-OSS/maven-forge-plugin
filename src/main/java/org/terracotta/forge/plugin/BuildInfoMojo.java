@@ -83,6 +83,8 @@ public class BuildInfoMojo extends AbstractMojo {
 		
 		System.setProperty("build.revision", revision);
 		System.setProperty("build.svn.url", svnUrl);
+		project.getProperties().setProperty("build.revision", revision);
+		project.getProperties().setProperty("build.svn.url", svnUrl);
 		
 		String host = UNKNOWN;
 		String user = System.getProperty("user.name", UNKNOWN);
@@ -97,5 +99,8 @@ public class BuildInfoMojo extends AbstractMojo {
 		System.setProperty("build.user", user);
 		System.setProperty("build.host", host);
 		System.setProperty("build.timestamp", timestamp);
+		project.getProperties().setProperty("build.user", user);
+		project.getProperties().setProperty("build.host", host);
+		project.getProperties().setProperty("build.timestamp", timestamp);
 	}
 }
