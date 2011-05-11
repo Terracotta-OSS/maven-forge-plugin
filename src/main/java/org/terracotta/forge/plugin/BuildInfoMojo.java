@@ -106,7 +106,7 @@ public class BuildInfoMojo extends AbstractMojo {
 		if (startIndex > 0) {
 			int endIndex = url.indexOf("/", startIndex + 9);
 			if (endIndex < 0) {
-				endIndex = url.length() - 1;
+				endIndex = url.length();
 			}
 			return url.substring(startIndex + 9, endIndex);
 		}
@@ -114,7 +114,7 @@ public class BuildInfoMojo extends AbstractMojo {
 		if (startIndex > 0) {
 			int endIndex = url.indexOf("/", startIndex + 5);
 			if (endIndex < 0) {
-				endIndex = url.length() - 1;
+				endIndex = url.length();
 			}			
 			return url.substring(startIndex + 5, endIndex);
 		}
