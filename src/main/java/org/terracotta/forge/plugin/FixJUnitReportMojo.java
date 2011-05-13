@@ -33,7 +33,9 @@ public class FixJUnitReportMojo extends AbstractMojo {
 	 * @readonly
 	 */
 	protected MavenProject project;
-	private final Pattern classnamePattern = Pattern.compile("TEST-(.*)\\.xml");
+	private final Pattern classnamePatternXml = Pattern
+			.compile("TEST-(.*)\\.xml");
+	private final Pattern classnamePatternTxt = Pattern.compile("(.*)\\.txt");
 
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		File sureFireReportDir = new File(project.getBuild().getDirectory(),
@@ -41,43 +43,73 @@ public class FixJUnitReportMojo extends AbstractMojo {
 		if (!sureFireReportDir.isDirectory()) {
 			getLog().warn("surefire-reports folder was not found");
 		} else {
+
 			File[] reports = sureFireReportDir.listFiles(new FilenameFilter() {
 				public boolean accept(File dir, String name) {
-					return name.startsWith("TEST-") && name.endsWith(".xml");
+					return new File(dir, name).length() == 0L;
 				}
 			});
+
 			if (reports.length == 0) {
-				getLog().info("No junit reports were found");
+				getLog().info("No empty junit reports were found");
 			}
+
 			for (File report : reports) {
-				if (report.length() == 0L) {
-					getLog().info("Fixing report " + report);
-					String defaultReport = DEAULT_REPORT.replace("CLASSNAME",
-							getClassname(report.getName()));
-					Writer writer = null;
+				String className = getClassname(report.getName());
+
+				// skip non junit report
+				if (className == null) continue;
+
+				getLog().info("Fixing report " + report);
+
+				if (report.getName().endsWith(".xml")) {
 					try {
-						writer = new PrintWriter(report);
-						IOUtils.write(defaultReport, writer);
-					}catch (IOException e) {
-						throw new MojoExecutionException(e.getMessage());
-					}finally {
-						IOUtils.closeQuietly(writer);
+						createDefaultReport(report, className);
+					} catch (IOException e) {
+						throw new MojoExecutionException(
+								"failed to write default report", e);
+					}
+				} else if (report.getName().endsWith(".txt")) {
+					File xmlReport = new File(report.getParentFile(), "TEST-"
+							+ className + ".xml");
+					if (!xmlReport.exists() || xmlReport.length() == 0L) {
+						try {
+							createDefaultReport(xmlReport, className);
+						} catch (IOException e) {
+							throw new MojoExecutionException(
+									"failed to write default report", e);
+						}
 					}
 				}
 			}
 		}
 	}
 
-	private String getClassname(String filename) {
-		Matcher matcher = classnamePattern.matcher(filename);
-		String classname = "unknown";
-		if (matcher.matches()) {
-			classname = matcher.group(1);
-		} else {
-			throw new RuntimeException("Can't parse classname from filename: "
-					+ filename);
+	private void createDefaultReport(File report, String className)
+			throws IOException {
+		String defaultReport = DEAULT_REPORT.replace("CLASSNAME", className);
+		Writer writer = null;
+		try {
+			writer = new PrintWriter(report);
+			IOUtils.write(defaultReport, writer);
+		} finally {
+			IOUtils.closeQuietly(writer);
 		}
-		return classname;
+	}
+
+	private String getClassname(String filename) {
+		Matcher matcher = null;
+		if (filename.endsWith(".xml")) {
+			matcher = classnamePatternXml.matcher(filename);
+		} else if (filename.endsWith(".txt")) {
+			matcher = classnamePatternTxt.matcher(filename);
+		}
+
+		if (matcher.matches()) {
+			return matcher.group(1);
+		} else {
+			return null;
+		}
 	}
 
 	private static final String DEAULT_REPORT = "<?xml version='1.0' encoding='UTF-8'?>\n"
@@ -88,6 +120,5 @@ public class FixJUnitReportMojo extends AbstractMojo {
 			+ "    </failure>\n"
 			+ "  </testcase>\n"
 			+ "  <system-out />\n"
-			+ "  <system-err />\n"
-			+ "</testsuite>\n";
+			+ "  <system-err />\n" + "</testsuite>\n";
 }
