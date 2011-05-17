@@ -55,8 +55,6 @@ public class JUnitReportCleaner extends DefaultHandler {
   private StringBuilder       currentText;
   private int                 deleteDepth;
 
-  private StringBuilder       text;
-
   public JUnitReportCleaner() {
     UNWANTED_ELEMENTS.add("properties");
     UNWANTED_ELEMENTS.add("system-out");
@@ -179,7 +177,7 @@ public class JUnitReportCleaner extends DefaultHandler {
       throws SAXException {
     if (deleteDepth == 0) {
       if (currentText != null && currentText.length() > 0) {
-        reportBuffer.append(text.toString()).append("\n");
+        reportBuffer.append(currentText.toString()).append("\n");
       }
       reportBuffer.append("</" + name + ">\n");
       currentText = null;
