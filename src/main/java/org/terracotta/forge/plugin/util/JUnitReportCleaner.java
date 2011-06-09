@@ -20,6 +20,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.maven.plugin.logging.Log;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -54,8 +55,11 @@ public class JUnitReportCleaner extends DefaultHandler {
   private StringBuilder       reportBuffer;
   private StringBuilder       currentText;
   private int                 deleteDepth;
+  private int                 failCount;
+  private final Log           log;
 
-  public JUnitReportCleaner() {
+  public JUnitReportCleaner(Log log) {
+    this.log = log;
     UNWANTED_ELEMENTS.add("properties");
     UNWANTED_ELEMENTS.add("system-out");
     UNWANTED_ELEMENTS.add("system-err");
@@ -65,8 +69,11 @@ public class JUnitReportCleaner extends DefaultHandler {
     if (!report.exists()) {
       throw new RuntimeException("JUnit report " + report + " doesn't exist");
     }
+    
+    String className = getClassname(report.getName());
+    
     if (report.length() == 0L) {
-      createDefaultReport(report, getClassname(report.getName()));
+      createDefaultReport(report, className);
       return;
     }
 
@@ -88,6 +95,9 @@ public class JUnitReportCleaner extends DefaultHandler {
       try {
         writer = new PrintWriter(report);
         IOUtils.write(reportBuffer.toString(), writer);
+        if (failCount > 0) {
+          log.info("TEST " + className + " FAILED.");
+        }
       } catch (IOException e) {
         throw new RuntimeException(e);
       } finally {
@@ -96,7 +106,7 @@ public class JUnitReportCleaner extends DefaultHandler {
     } catch (IOException e) {
       throw new RuntimeException(e);
     } catch (SAXException e) {
-      createDefaultReport(report, getClassname(report.getName()));
+      createDefaultReport(report, className);
     }
   }
 
@@ -106,6 +116,7 @@ public class JUnitReportCleaner extends DefaultHandler {
     try {
       writer = new PrintWriter(report);
       IOUtils.write(defaultReport, writer);
+      log.info("TEST " + className + " FAILED.");
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
@@ -131,6 +142,7 @@ public class JUnitReportCleaner extends DefaultHandler {
   private void reset(File report) {
     reportBuffer = new StringBuilder();
     deleteDepth = 0;
+    failCount = 0;
   }
 
   @Override
@@ -157,6 +169,17 @@ public class JUnitReportCleaner extends DefaultHandler {
   public void startElement(String uri, String localName, String name,
       Attributes attributes) throws SAXException {
     currentText = new StringBuilder();
+    
+    if ("testsuite".equals(name)) {
+      String errors = attributes.getValue("errors");
+      String failures = attributes.getValue("failures");
+      if (errors != null) {
+        failCount = Integer.valueOf(errors);
+      }
+      if (failures != null) {
+        failCount = Integer.valueOf(failures);
+      }
+    }
 
     if (UNWANTED_ELEMENTS.contains(name)) {
       deleteDepth++;

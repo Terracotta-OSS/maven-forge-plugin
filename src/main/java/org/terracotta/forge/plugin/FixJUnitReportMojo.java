@@ -28,6 +28,10 @@ public class FixJUnitReportMojo extends AbstractMojo {
    * @readonly
    */
   protected MavenProject project;
+  
+  public void setProject(MavenProject project) {
+    this.project = project;
+  }
 
   public void execute() throws MojoExecutionException, MojoFailureException {
     File sureFireReportDir = new File(project.getBuild().getDirectory(),
@@ -36,7 +40,7 @@ public class FixJUnitReportMojo extends AbstractMojo {
       getLog().warn("surefire-reports folder was not found");
     } else {
 
-      JUnitReportCleaner cleaner = new JUnitReportCleaner();
+      JUnitReportCleaner cleaner = new JUnitReportCleaner(getLog());
 
       File[] reports = sureFireReportDir.listFiles(new FilenameFilter() {
         public boolean accept(File dir, String name) {
@@ -57,13 +61,11 @@ public class FixJUnitReportMojo extends AbstractMojo {
           continue;
 
         if (report.getName().endsWith(".xml")) {
-          getLog().debug("Cleaning up report " + report);
           cleaner.cleanReport(report);
         } else if (report.getName().endsWith(".txt")) {
           File xmlReport = new File(report.getParentFile(), "TEST-" + className
               + ".xml");
           if (!xmlReport.exists() || xmlReport.length() == 0L) {
-            getLog().debug("Creating default report " + report);
             cleaner.createDefaultReport(xmlReport, className);
           }
         }
