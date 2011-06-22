@@ -174,10 +174,10 @@ public class JUnitReportCleaner extends DefaultHandler {
       String errors = attributes.getValue("errors");
       String failures = attributes.getValue("failures");
       if (errors != null) {
-        failCount = Integer.valueOf(errors);
+        failCount += Integer.valueOf(errors);
       }
       if (failures != null) {
-        failCount = Integer.valueOf(failures);
+        failCount += Integer.valueOf(failures);
       }
     }
 
