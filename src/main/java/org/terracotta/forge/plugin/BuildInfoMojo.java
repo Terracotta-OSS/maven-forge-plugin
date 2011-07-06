@@ -51,7 +51,7 @@ public class BuildInfoMojo extends AbstractMojo {
 	private String rootPath;
 	
   /**
-   * @parameter expression="${ee.rootPath}
+   * @parameter expression="${eeRootPath}
    */
   private String eeRootPath;	
 
@@ -84,6 +84,7 @@ public class BuildInfoMojo extends AbstractMojo {
 			
 			if (eeRootPath != null) {
 			  String eeSvnInfo = Util.getSvnInfo(new File(eeRootPath).getCanonicalPath());
+			  getLog().debug("EE SVN INFO: " + eeSvnInfo);
 			  br = new BufferedReader(new StringReader(eeSvnInfo));
 			  while ((line = br.readLine()) != null) {
 	        if (line.startsWith("URL: ")) {
