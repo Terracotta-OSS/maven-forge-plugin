@@ -49,6 +49,11 @@ public class BuildInfoMojo extends AbstractMojo {
 	 * @parameter expression="${rootPath}
 	 */
 	private String rootPath;
+	
+  /**
+   * @parameter expression="${ee.rootPath}
+   */
+  private String eeRootPath;	
 
 	/**
    * 
@@ -56,6 +61,8 @@ public class BuildInfoMojo extends AbstractMojo {
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		String svnUrl = UNKNOWN;
 		String revision = UNKNOWN;
+    String eeSvnUrl = UNKNOWN;
+    String eeRevision = UNKNOWN;		
 		
 		if (rootPath == null) {
 			rootPath = project.getBasedir().getAbsolutePath();
@@ -73,6 +80,19 @@ public class BuildInfoMojo extends AbstractMojo {
 				if (line.startsWith("Last Changed Rev: ")) {
 					revision = line.substring("Last Changed Rev: ".length());
 				}
+			}
+			
+			if (eeRootPath != null) {
+			  String eeSvnInfo = Util.getSvnInfo(new File(eeRootPath).getCanonicalPath());
+			  br = new BufferedReader(new StringReader(eeSvnInfo));
+			  while ((line = br.readLine()) != null) {
+	        if (line.startsWith("URL: ")) {
+	          eeSvnUrl = line.substring("URL: ".length());
+	        }
+	        if (line.startsWith("Last Changed Rev: ")) {
+	          eeRevision = line.substring("Last Changed Rev: ".length());
+	        }
+	      }
 			}
 		} catch (IOException ioe) {
 			throw new MojoExecutionException("Error reading svn info", ioe);
@@ -98,6 +118,12 @@ public class BuildInfoMojo extends AbstractMojo {
 		project.getProperties().setProperty("build.user", user);
 		project.getProperties().setProperty("build.host", host);
 		project.getProperties().setProperty("build.timestamp", timestamp);
+		
+		if (eeRootPath != null) {
+	    project.getProperties().setProperty("build.ee.revision", eeRevision);
+	    project.getProperties().setProperty("build.ee.svn.url", eeSvnUrl);
+	    project.getProperties().setProperty("build.ee.branch", guessBranchOrTagFromUrl(eeSvnUrl));
+		}
 	}
 	
 	private String guessBranchOrTagFromUrl(String url) {
