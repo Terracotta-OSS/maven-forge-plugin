@@ -150,7 +150,7 @@ public class ManifestMojo extends AbstractMojo {
 
       if ("Class-Path".equals(key)
           && attributes.containsKey(new Name("Class-Path"))) {
-        String extendedClasspath = attributes.getValue("Class-Path") + ","
+        String extendedClasspath = attributes.getValue("Class-Path") + " "
             + value;
         attributes.putValue(key, extendedClasspath);
       } else {
