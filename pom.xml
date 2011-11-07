@@ -6,7 +6,7 @@
   <groupId>org.terracotta</groupId>
   <artifactId>maven-forge-plugin</artifactId>
   <packaging>maven-plugin</packaging>
-  <version>1.0.4-SNAPSHOT</version>
+  <version>1.0.4</version>
   <name>maven-forge-plugin</name>
   <description>Util plugin for Terracotta Forge projects</description>
   <url>http://forge.terracotta.org</url>
