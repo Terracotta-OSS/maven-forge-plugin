@@ -531,7 +531,7 @@ public class TerracottaSurefireMojo implements Mojo, ContextEnabled {
   /**
    * The remote plugin repositories declared in the POM.
    *
-   * @parameter expression="${project.pluginArtifactRepositories}"
+   * @parameter expression="${project.remoteArtifactRepositories}"
    * @since 2.2
    */
   @SuppressWarnings("rawtypes")
