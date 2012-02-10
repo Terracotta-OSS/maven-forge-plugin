@@ -60,6 +60,11 @@ public class Util {
   }
 
   public static String getSvnInfo(String svnRepo) {
-    return exec("svn", Arrays.asList("info", svnRepo), null);
+    String svnCommand = "svn";
+    String svnHome = System.getenv("SVN_HOME");
+    if (svnHome != null) {
+      svnCommand = svnHome + "/bin/svn";
+    }
+    return exec(svnCommand, Arrays.asList("info", svnRepo), null); 
   }
 }
