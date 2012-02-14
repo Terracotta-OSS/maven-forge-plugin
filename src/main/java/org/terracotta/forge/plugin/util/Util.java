@@ -65,6 +65,7 @@ public class Util {
     if (svnHome != null) {
       svnCommand = svnHome + "/bin/svn";
     }
+    
     return exec(svnCommand, Arrays.asList("info", svnRepo), null); 
   }
 }

@@ -36,6 +36,7 @@ import org.terracotta.forge.plugin.util.Util;
  * @author hhuynh
  * 
  * @goal manifest
+ * @requiresDependencyResolution compile
  */
 public class ManifestMojo extends AbstractMojo {
 
@@ -87,7 +88,7 @@ public class ManifestMojo extends AbstractMojo {
     if (!addClasspath)
       return;
     @SuppressWarnings("unchecked")
-    Set<Artifact> artifacts = project.getDependencyArtifacts();
+    Set<Artifact> artifacts = project.getArtifacts();
 
     StringBuilder classpath = new StringBuilder();
     for (Artifact a : artifacts) {
