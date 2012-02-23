@@ -8,20 +8,24 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
 
 /**
- *
+ * 
  * @author hhuynh
  */
 public class Util {
 
   /**
    * Run a shell command and return the output as String
-   *
+   * 
    */
   public static String exec(String command, List<String> params, File workDir) {
     File outputFile;
@@ -38,7 +42,8 @@ public class Util {
     ExecTask execTask = new ExecTask();
     execTask.setProject(dummyProject);
     execTask.setOutput(outputFile);
-    execTask.setDir(workDir != null ? workDir : new File(System.getProperty("user.dir")));
+    execTask.setDir(workDir != null ? workDir : new File(System
+        .getProperty("user.dir")));
     execTask.setExecutable(command);
     if (params != null) {
       for (String param : params) {
@@ -65,7 +70,17 @@ public class Util {
     if (svnHome != null) {
       svnCommand = svnHome + "/bin/svn";
     }
-    
-    return exec(svnCommand, Arrays.asList("info", svnRepo), null); 
+
+    return exec(svnCommand, Arrays.asList("info", svnRepo), null);
+  }
+
+  public static String getZipEntries(File file) throws IOException {
+    StringBuilder buff = new StringBuilder();
+    ZipFile zipFile = new ZipFile(file);
+    Enumeration<? extends ZipEntry> zipEntries = zipFile.entries();
+    while (zipEntries.hasMoreElements()) {
+      buff.append((zipEntries.nextElement().getName())).append("\n");
+    }
+    return buff.toString();
   }
 }
