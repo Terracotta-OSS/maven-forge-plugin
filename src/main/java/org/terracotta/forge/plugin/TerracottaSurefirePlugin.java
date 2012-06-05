@@ -3,6 +3,25 @@
  */
 package org.terracotta.forge.plugin;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -21,24 +40,6 @@ import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugin.surefire.SurefirePlugin;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.surefire.booter.SurefireBooterForkException;
-import org.terracotta.forge.plugin.FixJUnitReportMojo;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TerracottaSurefirePlugin extends SurefirePlugin {
 
@@ -78,19 +79,24 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   private File                                 listFile;
   private int                                  poundTimes;
   private boolean                              devLog;
+  private boolean                              setL2Classpath;
 
   public TerracottaSurefirePlugin() {
     this(BASE_CORE_VERSIONS);
   }
 
-  public TerracottaSurefirePlugin(Map<ToolkitAPIVersion, String> baseCoreVersions) {
+  public TerracottaSurefirePlugin(
+      Map<ToolkitAPIVersion, String> baseCoreVersions) {
     this.baseCoreVersions = baseCoreVersions;
   }
 
-  void setup(String terracottaCoreVersion, MavenProject project, ArtifactFactory factory,
-             ArtifactResolver artifactResolver, List remoteRepositories, ArtifactRepository localRepository,
-             ArtifactCollector artifactCollector, ArtifactMetadataSource metadataSource, boolean skipQualifierMatch,
-             boolean skipToolkitResolve, boolean cleanJunitReports, File listFile, int poundTimes, boolean devLog) {
+  void setup(String terracottaCoreVersion, MavenProject project,
+      ArtifactFactory factory, ArtifactResolver artifactResolver,
+      List remoteRepositories, ArtifactRepository localRepository,
+      ArtifactCollector artifactCollector,
+      ArtifactMetadataSource metadataSource, boolean skipQualifierMatch,
+      boolean skipToolkitResolve, boolean cleanJunitReports, File listFile,
+      int poundTimes, boolean devLog, boolean setL2Classpath) {
     this.terracottaCoreVersion = terracottaCoreVersion;
     this.project = project;
     this.artifactFactory = factory;
@@ -105,6 +111,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     this.listFile = listFile;
     this.poundTimes = poundTimes;
     this.devLog = devLog;
+    this.setL2Classpath = setL2Classpath;
   }
 
   public boolean isCleanJunitReports() {
@@ -123,16 +130,20 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     return listFile;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
     if (devLog) {
       File currentDir = super.getWorkingDirectory();
-      if (currentDir == null) currentDir = new File(".");
+      if (currentDir == null) {
+        currentDir = new File(".");
+      }
       File devLog4jFile = new File(currentDir, ".tc.dev.log4j.properties");
       if (!devLog4jFile.exists()) {
         try {
           devLog4jFile.getParentFile().mkdirs();
-          if (!devLog4jFile.createNewFile()) throw new IOException("createNewFile return false");
+          if (!devLog4jFile.createNewFile())
+            throw new IOException("createNewFile return false");
         } catch (IOException e1) {
           getLog().error(e1);
           throw new MojoExecutionException("Failed to create " + devLog4jFile);
@@ -141,7 +152,8 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     }
 
     getLog().debug("terracottaCoreVersion: " + terracottaCoreVersion);
-    if (!skipToolkitResolve && terracottaCoreVersion != null && terracottaCoreVersion.length() != 0) {
+    if (!skipToolkitResolve && terracottaCoreVersion != null
+        && terracottaCoreVersion.length() != 0) {
       try {
         updateToolkitDependencies();
       } catch (Exception e) {
@@ -150,12 +162,34 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       }
     }
 
+    if (setL2Classpath) {
+      File terracottaJarFile = getTerracottaJar();
+      getLog().info("Terracotta jar file: " + terracottaJarFile);
+      if (terracottaJarFile == null) {
+        throw new MojoExecutionException(
+            "Couldn't find Terracotta core artifact");
+      }
+      try {
+        getLog()
+            .debug(
+                "Setting L2 classpath to system property tc.tests.info.l2.classpath");
+        setArgLine(getArgLine() + " -Dtc.tests.info.l2.classpath="
+            + getTerracottaClassPath(terracottaJarFile));
+      } catch (Exception e) {
+        throw new MojoExecutionException("Error trying to find L2 classpath", e);
+      }
+    }
+
     try {
-      // recheck should_skip_test maven propperty to decide if tests should be skipped
-      String shouldSkipTestsValue = project.getProperties().getProperty("should_skip_tests");
+      // recheck should_skip_test maven propperty to decide if tests should be
+      // skipped
+      String shouldSkipTestsValue = project.getProperties().getProperty(
+          "should_skip_tests");
       if (shouldSkipTestsValue != null) {
-        getLog().warn("'should_skip_tests' property found, value is " + shouldSkipTestsValue
-                          + ". This value overrides the 'skipTests' original setting.");
+        getLog().warn(
+            "'should_skip_tests' property found, value is "
+                + shouldSkipTestsValue
+                + ". This value overrides the 'skipTests' original setting.");
         boolean shouldSkipTests = Boolean.valueOf(shouldSkipTestsValue);
         this.setSkipTests(shouldSkipTests);
       }
@@ -163,7 +197,9 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       // handle listFile
       if (listFile != null) {
         if (!listFile.exists()) {
-          getLog().warn("listFile '" + listFile + "' specified but does not exist. No tests will be run");
+          getLog().warn(
+              "listFile '" + listFile
+                  + "' specified but does not exist. No tests will be run");
           return;
         }
         getLog().info("Running tests found in file " + listFile);
@@ -216,7 +252,8 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     } catch (MojoExecutionException e) {
       if (e.getCause() instanceof SurefireBooterForkException) {
         // test timeout, don't throw this exception
-        // so Jenkins could parse JUnit reports and treat timeout failures as regular failures
+        // so Jenkins could parse JUnit reports and treat timeout failures as
+        // regular failures
         SurefireHelper.reportExecution(this, 1, getLog());
       } else {
         throw e;
@@ -235,10 +272,12 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   @Override
   protected boolean hasExecutedBefore() {
     // if we're pounding test, we have to lie so that the test can be run again
-    if (poundTimes > 1) return false;
+    if (poundTimes > 1)
+      return false;
     return super.hasExecutedBefore();
   }
 
+  @SuppressWarnings("rawtypes")
   private void updateToolkitDependencies() throws Exception {
     ProcessResult artifactsResults = process(wrap(project.getArtifacts()));
     ProcessResult dependenciesResult = process(wrap(project.getDependencies()));
@@ -261,12 +300,14 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
         dep.addExclusion(exclusion);
 
         exclusion = new Exclusion();
-        exclusion.setArtifactId("terracotta-toolkit-" + ver.toString() + "-runtime");
+        exclusion.setArtifactId("terracotta-toolkit-" + ver.toString()
+            + "-runtime");
         exclusion.setGroupId(TOOLKIT_RUNTIME_GROUP_ID);
         dep.addExclusion(exclusion);
 
         exclusion = new Exclusion();
-        exclusion.setArtifactId("terracotta-toolkit-" + ver.toString() + "-runtime-ee");
+        exclusion.setArtifactId("terracotta-toolkit-" + ver.toString()
+            + "-runtime-ee");
         exclusion.setGroupId(TOOLKIT_RUNTIME_GROUP_ID);
         dep.addExclusion(exclusion);
       }
@@ -289,16 +330,20 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       // recompute the artifact set with cleaned up toolkit references
       Set artifacts = project.createArtifacts(artifactFactory, null, null);
 
-      artifacts = new HashSet(artifactResolver.resolveTransitively(artifacts, project.getArtifact(),
-                                                                   remoteRepositories, localRepository, metadataSource)
-          .getArtifacts());
+      artifacts = new HashSet(artifactResolver.resolveTransitively(artifacts,
+          project.getArtifact(), remoteRepositories, localRepository,
+          metadataSource).getArtifacts());
 
-      // Due to a what seems like a maven 2.x bug we need to potentially remove transitive toolkit dependencies that
-      // might have crept back in here. The exclusions added above don't seem to working as desired sometimes
+      // Due to a what seems like a maven 2.x bug we need to potentially remove
+      // transitive toolkit dependencies that
+      // might have crept back in here. The exclusions added above don't seem to
+      // working as desired sometimes
       for (Iterator iter = artifacts.iterator(); iter.hasNext();) {
         Artifact a = (Artifact) iter.next();
-        if (a.getGroupId().equals(TOOLKIT_RUNTIME_GROUP_ID) || a.getGroupId().equals(TOOLKIT_TIM_GROUP_ID)) {
-          if (a.getArtifactId().startsWith("terracotta-toolkit-") && a.getDependencyTrail().size() > 2) {
+        if (a.getGroupId().equals(TOOLKIT_RUNTIME_GROUP_ID)
+            || a.getGroupId().equals(TOOLKIT_TIM_GROUP_ID)) {
+          if (a.getArtifactId().startsWith("terracotta-toolkit-")
+              && a.getDependencyTrail().size() > 2) {
             iter.remove();
           }
         }
@@ -309,9 +354,11 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   }
 
   private static Collection<Wrapper> wrap(Collection toWrap) {
-    if (toWrap == null) return null;
+    if (toWrap == null)
+      return null;
 
-    Collection<Wrapper> rv = toWrap instanceof List ? new ArrayList<Wrapper>() : new HashSet<Wrapper>();
+    Collection<Wrapper> rv = toWrap instanceof List ? new ArrayList<Wrapper>()
+        : new HashSet<Wrapper>();
 
     for (Object o : toWrap) {
       if (o instanceof Artifact) {
@@ -327,11 +374,12 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     return rv;
   }
 
-  private ProcessResult process(Collection<Wrapper> collection) throws MojoExecutionException {
+  private ProcessResult process(Collection<Wrapper> collection)
+      throws MojoExecutionException {
     Wrapper TIM = null;
     Wrapper Runtime = null;
     EnumMap<ArtifactType, ToolkitAPIVersion> maxVersions = new EnumMap<ArtifactType, ToolkitAPIVersion>(
-                                                                                                        ArtifactType.class);
+        ArtifactType.class);
 
     List<Wrapper> remove = new ArrayList<Wrapper>();
 
@@ -376,21 +424,22 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     }
 
     for (Entry<ArtifactType, ToolkitAPIVersion> entry : maxVersions.entrySet()) {
-      getLog().info("Targeting Toolkit API version " + entry.getValue()
-                        + ", but higher minor version may be used based on availability");
+      getLog().info(
+          "Targeting Toolkit API version " + entry.getValue()
+              + ", but higher minor version may be used based on availability");
 
       switch (entry.getKey()) {
-        case RUNTIME: {
-          setVersionForDependency(Runtime, entry.getValue());
-          break;
-        }
-        case TIM: {
-          setVersionForDependency(TIM, entry.getValue());
-          break;
-        }
-        default: {
-          throw new AssertionError(entry.getKey());
-        }
+      case RUNTIME: {
+        setVersionForDependency(Runtime, entry.getValue());
+        break;
+      }
+      case TIM: {
+        setVersionForDependency(TIM, entry.getValue());
+        break;
+      }
+      default: {
+        throw new AssertionError(entry.getKey());
+      }
       }
     }
 
@@ -408,7 +457,8 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   }
 
   private void adjustMaxVersion(Wrapper artifact, ToolkitAPIVersion ver,
-                                EnumMap<ArtifactType, ToolkitAPIVersion> maxVersions) throws MojoExecutionException {
+      EnumMap<ArtifactType, ToolkitAPIVersion> maxVersions)
+      throws MojoExecutionException {
     ArtifactType key = getArtifactType(artifact);
 
     ToolkitAPIVersion existingMax = maxVersions.get(key);
@@ -418,24 +468,29 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     } else {
       if (ver.getMajor() != existingMax.getMajor()) {
         // This isn't likely to happen but it seems good to catch anyway
-        throw new MojoExecutionException("Crossing major toolkit API versions: " + ver.getMajor() + " and "
-                                         + existingMax.getMajor() + " for " + artifact);
+        throw new MojoExecutionException(
+            "Crossing major toolkit API versions: " + ver.getMajor() + " and "
+                + existingMax.getMajor() + " for " + artifact);
       }
 
       if (ver.getMinor() > existingMax.getMinor()) {
-        getLog().info("Higher toolkit minor version detected (" + ver + ") vs (" + existingMax + ")");
+        getLog().info(
+            "Higher toolkit minor version detected (" + ver + ") vs ("
+                + existingMax + ")");
         maxVersions.put(key, ver);
       }
     }
   }
 
-  private void setVersionForDependency(Wrapper artifact, final ToolkitAPIVersion startingApiVer)
-      throws MojoExecutionException {
+  private void setVersionForDependency(Wrapper artifact,
+      final ToolkitAPIVersion startingApiVer) throws MojoExecutionException {
     String base = this.baseCoreVersions.get(startingApiVer);
     if (base == null) {
-      // This should only go off when we add a new API version but have not yet updated the base versions
-      throw new AssertionError("This plugin has no base core TC version defined for toolkit API version "
-                               + startingApiVer);
+      // This should only go off when we add a new API version but have not yet
+      // updated the base versions
+      throw new AssertionError(
+          "This plugin has no base core TC version defined for toolkit API version "
+              + startingApiVer);
     }
 
     ToolkitAPIVersion apiVer = startingApiVer;
@@ -443,27 +498,32 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     String toolkitRange = toolkitVersionRange(base);
     artifact.setVersion(toolkitRange);
 
-    String coreQualifier = new DefaultArtifactVersion(terracottaCoreVersion).getQualifier();
+    String coreQualifier = new DefaultArtifactVersion(terracottaCoreVersion)
+        .getQualifier();
 
     if (artifactResolver != null) {
       while (true) {
 
         try {
-          VersionRange toolkitMavenRange = VersionRange.createFromVersionSpec(toolkitRange);
+          VersionRange toolkitMavenRange = VersionRange
+              .createFromVersionSpec(toolkitRange);
 
-          Artifact a = artifactFactory.createDependencyArtifact(artifact.getGroupId(), artifactId, toolkitMavenRange,
-                                                                artifact.getType(), artifact.getClassifier(),
-                                                                artifact.getScope(), false);
+          Artifact a = artifactFactory.createDependencyArtifact(
+              artifact.getGroupId(), artifactId, toolkitMavenRange,
+              artifact.getType(), artifact.getClassifier(),
+              artifact.getScope(), false);
 
-          List<ArtifactVersion> allAvailableVersions = metadataSource.retrieveAvailableVersions(a, localRepository,
-                                                                                                remoteRepositories);
+          List<ArtifactVersion> allAvailableVersions = metadataSource
+              .retrieveAvailableVersions(a, localRepository, remoteRepositories);
 
           ArtifactVersion selectedVersion = null;
-          // pick the latest version in the range *and* with a matching qualifier
+          // pick the latest version in the range *and* with a matching
+          // qualifier
           for (ArtifactVersion version : allAvailableVersions) {
             if (toolkitMavenRange.containsVersion(version)) {
 
-              if (skipQualifierMatch() || isQualifierMatch(coreQualifier, version)) {
+              if (skipQualifierMatch()
+                  || isQualifierMatch(coreQualifier, version)) {
                 if (selectedVersion == null) {
                   selectedVersion = version;
                 } else {
@@ -476,8 +536,9 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
           }
 
           if (selectedVersion == null) {
-            getLog().warn("Cannot resolve " + artifactId + " with range " + toolkitRange
-                              + ". Moving to next minor API version");
+            getLog().warn(
+                "Cannot resolve " + artifactId + " with range " + toolkitRange
+                    + ". Moving to next minor API version");
 
             String prev = apiVer.getMajor() + "." + apiVer.getMinor();
             apiVer = apiVer.nextMinorVersion();
@@ -485,26 +546,31 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
             base = this.baseCoreVersions.get(apiVer);
             if (base == null) {
               // we've exceeded all the minor versions we have data for
-              throw new MojoExecutionException("No suitable toolkit can be resolved");
+              throw new MojoExecutionException(
+                  "No suitable toolkit can be resolved");
             }
             artifactId = artifactId.replace(prev, next);
             continue;
           }
 
           // Found a suitable toolkit, woo-hoo!
-          getLog().info("Changing toolkit reference (" + artifact.getArtifactId() + ")");
+          getLog().info(
+              "Changing toolkit reference (" + artifact.getArtifactId() + ")");
           artifact.setArtifactId(a.getArtifactId());
           artifact.setVersion(selectedVersion.toString());
           a.setVersion(selectedVersion.toString());
 
           Set<Artifact> collect = new HashSet<Artifact>();
           collect.add(a);
-          artifactCollector.collect(collect, project.getArtifact(), localRepository, remoteRepositories,
-                                    metadataSource, null, Collections.EMPTY_LIST);
+          artifactCollector.collect(collect, project.getArtifact(),
+              localRepository, remoteRepositories, metadataSource, null,
+              Collections.EMPTY_LIST);
 
           artifactResolver.resolve(a, remoteRepositories, localRepository);
 
-          getLog().info("   New reference: " + artifact.getArtifactId() + " " + artifact.getVersion());
+          getLog().info(
+              "   New reference: " + artifact.getArtifactId() + " "
+                  + artifact.getVersion());
           break;
         } catch (Exception e) {
           throw new MojoExecutionException("Error resolving toolkit", e);
@@ -527,33 +593,40 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
    */
   private String toolkitVersionRange(String base) {
     DefaultArtifactVersion baseCoreVersion = new DefaultArtifactVersion(base);
-    DefaultArtifactVersion coreVersion = new DefaultArtifactVersion(terracottaCoreVersion);
+    DefaultArtifactVersion coreVersion = new DefaultArtifactVersion(
+        terracottaCoreVersion);
 
     if (baseCoreVersion.getMajorVersion() != coreVersion.getMajorVersion()) {
-      // XXX: We can maybe fix this someday by silly tricks like using the first 100 major versions (ie. 1.0.0 to
+      // XXX: We can maybe fix this someday by silly tricks like using the first
+      // 100 major versions (ie. 1.0.0 to
       // 100.0.0) before crossing major TC versions
       return null;
     }
 
-    int major = 1 + (coreVersion.getMinorVersion() - baseCoreVersion.getMinorVersion());
-    int minor = (coreVersion.getIncrementalVersion() - baseCoreVersion.getIncrementalVersion());
+    int major = 1 + (coreVersion.getMinorVersion() - baseCoreVersion
+        .getMinorVersion());
+    int minor = (coreVersion.getIncrementalVersion() - baseCoreVersion
+        .getIncrementalVersion());
 
     String qualifier = "";
     if (coreVersion.getQualifier() != null) {
       qualifier = "-" + coreVersion.getQualifier();
     }
 
-    return "[" + major + "." + minor + ".0" + qualifier + "," + major + "." + (minor + 1) + ".0-SNAPSHOT)";
+    return "[" + major + "." + minor + ".0" + qualifier + "," + major + "."
+        + (minor + 1) + ".0-SNAPSHOT)";
   }
 
   private static boolean isToolkitTIM(Wrapper artifact) {
     return TOOLKIT_TIM_GROUP_ID.equals(artifact.getGroupId())
-           && TOOLKIT_TIM_ARTIFACT_ID_PATTERN.matcher(artifact.getArtifactId()).matches();
+        && TOOLKIT_TIM_ARTIFACT_ID_PATTERN.matcher(artifact.getArtifactId())
+            .matches();
   }
 
   private static boolean isToolkitRuntime(Wrapper artifact) {
     return TOOLKIT_RUNTIME_GROUP_ID.equals(artifact.getGroupId())
-           && TOOLKIT_RUNTIME_ARTIFACT_ID_PATTERN.matcher(artifact.getArtifactId()).matches();
+        && TOOLKIT_RUNTIME_ARTIFACT_ID_PATTERN
+            .matcher(artifact.getArtifactId()).matches();
   }
 
   private ToolkitAPIVersion getToolkitAPIVersion(Wrapper artifact) {
@@ -562,10 +635,14 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
 
     if (TOOLKIT_TIM_GROUP_ID.equals(groupId)) {
       Matcher m = TOOLKIT_TIM_ARTIFACT_ID_PATTERN.matcher(artifactId);
-      if (m.matches()) { return new ToolkitAPIVersion(m.group(1), m.group(2)); }
+      if (m.matches()) {
+        return new ToolkitAPIVersion(m.group(1), m.group(2));
+      }
     } else if (TOOLKIT_RUNTIME_GROUP_ID.equals(groupId)) {
       Matcher m = TOOLKIT_RUNTIME_ARTIFACT_ID_PATTERN.matcher(artifactId);
-      if (m.matches()) { return new ToolkitAPIVersion(m.group(1), m.group(2)); }
+      if (m.matches()) {
+        return new ToolkitAPIVersion(m.group(1), m.group(2));
+      }
     }
 
     return null;
@@ -585,10 +662,93 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     private final Wrapper             runtime;
     private final Wrapper             tim;
 
-    ProcessResult(Collection<Wrapper> processedItems, Wrapper tim, Wrapper runtime) {
+    ProcessResult(Collection<Wrapper> processedItems, Wrapper tim,
+        Wrapper runtime) {
       this.processedItems = processedItems;
       this.tim = tim;
       this.runtime = runtime;
+    }
+  }
+
+  private File getTerracottaJar() {
+    @SuppressWarnings("unchecked")
+    Set<Artifact> artifacts = project.getDependencyArtifacts();
+
+    for (Artifact a : artifacts) {
+      if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals(
+          "terracotta-ee"))
+          && a.getGroupId().equals("org.terracotta")) {
+        return a.getFile();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * assume coordinate in the form groupId:artifactId:version:type
+   * 
+   * @param artifactCoordinate
+   * @return
+   * @throws IOException
+   */
+  private File getArtifactFile(String artifactCoordinate) throws IOException {
+    String[] coords = artifactCoordinate.split(":");
+    if (coords.length != 4) {
+      throw new RuntimeException(
+          "Coordinate doesn't match template [groupId:artifactId:version:type]: "
+              + artifactCoordinate);
+    }
+    String groupId = coords[0];
+    String artifactId = coords[1];
+    String version = coords[2];
+    String type = coords[3];
+
+    File artifactFile = new File(localRepository.getBasedir(), groupId.replace(
+        '.', '/')
+        + "/"
+        + artifactId
+        + "/"
+        + version
+        + "/"
+        + artifactId
+        + "-"
+        + version + "." + type);
+
+    return artifactFile.getCanonicalFile();
+  }
+
+  private String getTerracottaClassPath(File terracottaJar) throws Exception {
+    Manifest manifest = null;
+    FileInputStream in = null;
+    try {
+      in = new FileInputStream(terracottaJar);
+      JarInputStream jarStream = new JarInputStream(in);
+      manifest = jarStream.getManifest();
+      String mavenClassPath = manifest.getMainAttributes().getValue(
+          "Maven-Class-Path");
+      if (mavenClassPath == null) {
+        throw new Exception("Coudln't find Maven-Class-Path in manifest of "
+            + terracottaJar);
+      }
+      StringBuilder sb = new StringBuilder();
+      sb.append(terracottaJar);
+
+      String[] classpathElements = mavenClassPath.split(" ");
+      for (String element : classpathElements) {
+        File path = getArtifactFile(element);
+        if (path != null) {
+          sb.append(File.pathSeparator).append(path.getAbsolutePath());
+        }
+      }
+      return sb.toString();
+    } finally {
+      if (in != null) {
+        try {
+          in.close();
+        } catch (IOException e) {
+          // ignore
+        }
+      }
     }
   }
 
@@ -603,7 +763,8 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     private final Object obj;
 
     public Wrapper(Artifact a) {
-      this(a, a.getGroupId(), a.getArtifactId(), a.getVersion(), a.getClassifier(), a.getType(), a.getScope());
+      this(a, a.getGroupId(), a.getArtifactId(), a.getVersion(), a
+          .getClassifier(), a.getType(), a.getScope());
     }
 
     public Dependency asDependency() {
@@ -618,11 +779,12 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     }
 
     public Wrapper(Dependency d) {
-      this(d, d.getGroupId(), d.getArtifactId(), d.getVersion(), d.getClassifier(), d.getType(), d.getScope());
+      this(d, d.getGroupId(), d.getArtifactId(), d.getVersion(), d
+          .getClassifier(), d.getType(), d.getScope());
     }
 
-    private Wrapper(Object obj, String groupId, String artifactId, String version, String classifier, String type,
-                    String scope) {
+    private Wrapper(Object obj, String groupId, String artifactId,
+        String version, String classifier, String type, String scope) {
       this.obj = obj;
       this.groupId = groupId;
       this.artifactId = artifactId;
@@ -686,7 +848,8 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
 
     @Override
     public String toString() {
-      return obj.getClass().getSimpleName() + "(" + groupId + "." + artifactId + " " + version + ")";
+      return obj.getClass().getSimpleName() + "(" + groupId + "." + artifactId
+          + " " + version + ")";
     }
   }
 

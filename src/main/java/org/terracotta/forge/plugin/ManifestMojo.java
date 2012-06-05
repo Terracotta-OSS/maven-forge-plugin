@@ -19,12 +19,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 import java.util.jar.Attributes.Name;
+import java.util.jar.Manifest;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
