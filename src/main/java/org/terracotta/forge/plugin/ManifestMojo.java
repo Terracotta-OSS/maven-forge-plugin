@@ -24,6 +24,7 @@ import java.util.jar.Attributes.Name;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -90,6 +91,7 @@ public class ManifestMojo extends AbstractMojo {
     @SuppressWarnings("unchecked")
     Set<Artifact> artifacts = project.getArtifacts();
 
+    StringBuilder mavenStyleClassPath = new StringBuilder();
     StringBuilder classpath = new StringBuilder();
     for (Artifact a : artifacts) {
       if (a.getArtifactHandler().isAddedToClasspath()) {
@@ -98,14 +100,22 @@ public class ManifestMojo extends AbstractMojo {
           File file = a.getFile();
           if (!(file.isDirectory() && file.getName().endsWith("classes"))) {
             classpath.append(file.getName()).append(" ");
+            mavenStyleClassPath.append(
+                a.getGroupId() + ":" + a.getArtifactId() + ":" + a.getVersion()
+                    + ":" + a.getType()).append(" ");
           }
         }
       }
     }
     if (classpath.length() > 0) {
       classpath.deleteCharAt(classpath.length() - 1);
+      mavenStyleClassPath.deleteCharAt(mavenStyleClassPath.length() - 1);
     }
     attributes.putValue("Class-Path", classpath.toString());
+    attributes.putValue("Maven-Class-Path", mavenStyleClassPath.toString());
+
+    Dependency d = new Dependency();
+
   }
 
   private void saveManifestFile(Manifest manifest)
