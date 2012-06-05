@@ -113,9 +113,6 @@ public class ManifestMojo extends AbstractMojo {
     }
     attributes.putValue("Class-Path", classpath.toString());
     attributes.putValue("Maven-Class-Path", mavenStyleClassPath.toString());
-
-    Dependency d = new Dependency();
-
   }
 
   private void saveManifestFile(Manifest manifest)
