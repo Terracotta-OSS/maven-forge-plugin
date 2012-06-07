@@ -700,15 +700,10 @@ public class TerracottaSurefireMojo implements Mojo, ContextEnabled {
    */
   private boolean                              __TC_devLog;
   
-  /**
-   * @parameter default-value="false"
-   */
-  private boolean                              __TC_setL2Classpath;
-
   public void execute() throws MojoExecutionException, MojoFailureException {
     __TC_delegate.setup(__TC_terracottaCoreVersion, project, artifactFactory, artifactResolver, remoteRepositories,
                         localRepository, __TC_artifactCollector, metadataSource, __TC_skipQualifierMatch,
-                        __TC_skipToolkitResolve, __TC_cleanJunitReports, __TC_listFile, __TC_poundTimes, __TC_devLog, __TC_setL2Classpath);
+                        __TC_skipToolkitResolve, __TC_cleanJunitReports, __TC_listFile, __TC_poundTimes, __TC_devLog);
     initDelegateFields();
     __TC_delegate.execute();
   }

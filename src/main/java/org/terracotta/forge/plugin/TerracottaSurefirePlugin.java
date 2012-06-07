@@ -79,7 +79,6 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   private File                                 listFile;
   private int                                  poundTimes;
   private boolean                              devLog;
-  private boolean                              setL2Classpath;
 
   public TerracottaSurefirePlugin() {
     this(BASE_CORE_VERSIONS);
@@ -96,7 +95,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       ArtifactCollector artifactCollector,
       ArtifactMetadataSource metadataSource, boolean skipQualifierMatch,
       boolean skipToolkitResolve, boolean cleanJunitReports, File listFile,
-      int poundTimes, boolean devLog, boolean setL2Classpath) {
+      int poundTimes, boolean devLog) {
     this.terracottaCoreVersion = terracottaCoreVersion;
     this.project = project;
     this.artifactFactory = factory;
@@ -111,7 +110,6 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     this.listFile = listFile;
     this.poundTimes = poundTimes;
     this.devLog = devLog;
-    this.setL2Classpath = setL2Classpath;
   }
 
   public boolean isCleanJunitReports() {
@@ -159,24 +157,6 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       } catch (Exception e) {
         getLog().error(e);
         throw new MojoExecutionException("error updating toolkit references", e);
-      }
-    }
-
-    if (setL2Classpath) {
-      File terracottaJarFile = getTerracottaJar();
-      getLog().info("Terracotta jar file: " + terracottaJarFile);
-      if (terracottaJarFile == null) {
-        throw new MojoExecutionException(
-            "Couldn't find Terracotta core artifact");
-      }
-      try {
-        getLog()
-            .debug(
-                "Setting L2 classpath to system property tc.tests.info.l2.classpath");
-        setArgLine(getArgLine() + " -Dtc.tests.info.l2.classpath="
-            + getTerracottaClassPath(terracottaJarFile));
-      } catch (Exception e) {
-        throw new MojoExecutionException("Error trying to find L2 classpath", e);
       }
     }
 
@@ -667,88 +647,6 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       this.processedItems = processedItems;
       this.tim = tim;
       this.runtime = runtime;
-    }
-  }
-
-  private File getTerracottaJar() {
-    @SuppressWarnings("unchecked")
-    Set<Artifact> artifacts = project.getDependencyArtifacts();
-
-    for (Artifact a : artifacts) {
-      if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals(
-          "terracotta-ee"))
-          && a.getGroupId().equals("org.terracotta")) {
-        return a.getFile();
-      }
-    }
-    return null;
-  }
-
-  /**
-   * assume coordinate in the form groupId:artifactId:version:type
-   * 
-   * @param artifactCoordinate
-   * @return
-   * @throws IOException
-   */
-  private File getArtifactFile(String artifactCoordinate) throws IOException {
-    String[] coords = artifactCoordinate.split(":");
-    if (coords.length != 4) {
-      throw new RuntimeException(
-          "Coordinate doesn't match template [groupId:artifactId:version:type]: "
-              + artifactCoordinate);
-    }
-    String groupId = coords[0];
-    String artifactId = coords[1];
-    String version = coords[2];
-    String type = coords[3];
-
-    File artifactFile = new File(localRepository.getBasedir(), groupId.replace(
-        '.', '/')
-        + "/"
-        + artifactId
-        + "/"
-        + version
-        + "/"
-        + artifactId
-        + "-"
-        + version + "." + type);
-
-    return artifactFile.getCanonicalFile();
-  }
-
-  private String getTerracottaClassPath(File terracottaJar) throws Exception {
-    Manifest manifest = null;
-    FileInputStream in = null;
-    try {
-      in = new FileInputStream(terracottaJar);
-      JarInputStream jarStream = new JarInputStream(in);
-      manifest = jarStream.getManifest();
-      String mavenClassPath = manifest.getMainAttributes().getValue(
-          "Maven-Class-Path");
-      if (mavenClassPath == null) {
-        throw new Exception("Coudln't find Maven-Class-Path in manifest of "
-            + terracottaJar);
-      }
-      StringBuilder sb = new StringBuilder();
-      sb.append(terracottaJar);
-
-      String[] classpathElements = mavenClassPath.split(" ");
-      for (String element : classpathElements) {
-        File path = getArtifactFile(element);
-        if (path != null) {
-          sb.append(File.pathSeparator).append(path.getAbsolutePath());
-        }
-      }
-      return sb.toString();
-    } finally {
-      if (in != null) {
-        try {
-          in.close();
-        } catch (IOException e) {
-          // ignore
-        }
-      }
     }
   }
 
