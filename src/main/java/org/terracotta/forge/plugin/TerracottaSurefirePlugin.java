@@ -52,6 +52,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     BASE_CORE_VERSIONS.put(new ToolkitAPIVersion(1, 3), "3.3.0");
     BASE_CORE_VERSIONS.put(new ToolkitAPIVersion(1, 4), "3.3.0");
     BASE_CORE_VERSIONS.put(new ToolkitAPIVersion(1, 5), "3.3.0");
+    BASE_CORE_VERSIONS.put(new ToolkitAPIVersion(1, 6), "3.3.0");
   }
 
   private static final String                  TOOLKIT_TIM_GROUP_ID                = "org.terracotta.toolkit";
