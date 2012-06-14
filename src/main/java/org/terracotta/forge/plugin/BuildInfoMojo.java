@@ -28,7 +28,7 @@ import org.terracotta.forge.plugin.util.Util;
  * "build.svn.url"  == from svn info "URL"
  * "build.host"
  * "build.user"
- * "build.timpestamp"
+ * "build.timestamp"
  * 
  * @author hhuynh
  * @goal buildinfo
