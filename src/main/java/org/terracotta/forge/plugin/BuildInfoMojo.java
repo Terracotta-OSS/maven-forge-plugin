@@ -4,6 +4,12 @@
  */
 package org.terracotta.forge.plugin;
 
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.project.MavenProject;
+import org.terracotta.forge.plugin.util.Util;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -11,12 +17,6 @@ import java.io.StringReader;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.project.MavenProject;
-import org.terracotta.forge.plugin.util.Util;
 
 /**
  * Collect build info of the current project.
@@ -53,19 +53,31 @@ public class BuildInfoMojo extends AbstractMojo {
   /**
    * @parameter expression="${eeRootPath}
    */
-  private String eeRootPath;	
+  private String eeRootPath;
+  
+  /**
+   * @parameter expression="${osRootPath}
+   */
+  private String osRootPath;
 
 	/**
    * 
    */
-	public void execute() throws MojoExecutionException, MojoFailureException {
+	@Override
+  public void execute() throws MojoExecutionException, MojoFailureException {
 		String svnUrl = UNKNOWN;
 		String revision = UNKNOWN;
     String eeSvnUrl = UNKNOWN;
-    String eeRevision = UNKNOWN;		
+    String eeRevision = UNKNOWN;
+    String osSvnUrl = UNKNOWN;
+    String osRevision = UNKNOWN;
 		
 		if (rootPath == null) {
 			rootPath = project.getBasedir().getAbsolutePath();
+		}
+		
+		if (eeRootPath != null && osRootPath != null) {
+		  throw new MojoExecutionException("eeRootPath and osRootPath are mutual exclusive. Both cannot be set.");
 		}
 		
 		try {
@@ -95,16 +107,23 @@ public class BuildInfoMojo extends AbstractMojo {
 	        }
 	      }
 			}
+			
+	     if (osRootPath != null) {
+	        String eeSvnInfo = Util.getSvnInfo(new File(osRootPath).getCanonicalPath());
+	        getLog().debug("OS SVN INFO: " + eeSvnInfo);
+	        br = new BufferedReader(new StringReader(eeSvnInfo));
+	        while ((line = br.readLine()) != null) {
+	          if (line.startsWith("URL: ")) {
+	            osSvnUrl = line.substring("URL: ".length());
+	          }
+	          if (line.startsWith("Last Changed Rev: ")) {
+	            osRevision = line.substring("Last Changed Rev: ".length());
+	          }
+	        }
+	      }
 		} catch (IOException ioe) {
 			throw new MojoExecutionException("Error reading svn info", ioe);
 		}
-		
-		getLog().debug("Setting build.revision to " + revision);
-		getLog().debug("Setting build.svn.url to " + svnUrl);
-		
-		project.getProperties().setProperty("build.revision", revision);
-		project.getProperties().setProperty("build.svn.url", svnUrl);
-		project.getProperties().setProperty("build.branch", guessBranchOrTagFromUrl(svnUrl));
 		
 		String host = UNKNOWN;
 		String user = System.getProperty("user.name", UNKNOWN);
@@ -125,6 +144,28 @@ public class BuildInfoMojo extends AbstractMojo {
 	    project.getProperties().setProperty("build.ee.svn.url", eeSvnUrl);
 	    project.getProperties().setProperty("build.ee.branch", guessBranchOrTagFromUrl(eeSvnUrl));
 		}
+		
+    if (osRootPath != null) {
+      project.getProperties().setProperty("build.os.revision", osRevision);
+      project.getProperties().setProperty("build.os.svn.url", osSvnUrl);
+      project.getProperties().setProperty("build.os.branch", guessBranchOrTagFromUrl(osSvnUrl));
+    }
+   
+    String fullRevision = revision;
+    // we use the template EE_REVISION-OS_REVISION
+    if (eeRootPath != null) {
+      fullRevision = eeRevision + "-" + revision;
+    }
+    if (osRootPath != null) {
+      fullRevision = revision + "-" + osRevision;
+    }
+    
+    getLog().debug("Setting build.revision to " + fullRevision);
+    getLog().debug("Setting build.svn.url to " + svnUrl);
+    
+    project.getProperties().setProperty("build.revision", fullRevision);
+    project.getProperties().setProperty("build.svn.url", svnUrl);
+    project.getProperties().setProperty("build.branch", guessBranchOrTagFromUrl(svnUrl));
 	}
 	
 	private String guessBranchOrTagFromUrl(String url) {
@@ -142,7 +183,7 @@ public class BuildInfoMojo extends AbstractMojo {
 			int endIndex = url.indexOf("/", startIndex + 5);
 			if (endIndex < 0) {
 				endIndex = url.length();
-			}			
+			}
 			return url.substring(startIndex + 5, endIndex);
 		}
 		return "unknown";
