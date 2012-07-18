@@ -4,6 +4,14 @@
  */
 package org.terracotta.forge.plugin;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.project.MavenProject;
+import org.terracotta.forge.plugin.util.Util;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,21 +22,15 @@ import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Attributes.Name;
 import java.util.jar.Manifest;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.project.MavenProject;
-import org.terracotta.forge.plugin.util.Util;
 
 /**
  * Mojo to create manifest with build info (ie, timestamp, revision, url, etc.)
@@ -61,7 +63,7 @@ public class ManifestMojo extends AbstractMojo {
    * @parameter express="${manifestEntries}"
    * 
    */
-  private Map<String, String> manifestEntries = new HashMap<String, String>();
+  private final Map<String, String> manifestEntries = new HashMap<String, String>();
 
   /**
    * @parameter expression="${rootPath}
@@ -74,6 +76,12 @@ public class ManifestMojo extends AbstractMojo {
    */
   private boolean             addClasspath;
 
+  /**
+   * @parameter expression="${excludeGroupIds}" default-value=""
+   */
+  private String                    excludeGroupIds;
+
+  @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
     Manifest manifest = createOrLoadManifest();
     Attributes attributes = manifest.getMainAttributes();
@@ -90,9 +98,16 @@ public class ManifestMojo extends AbstractMojo {
     @SuppressWarnings("unchecked")
     Set<Artifact> artifacts = project.getArtifacts();
 
+    Set<String> excludedGroupIds = getExcludedGroupIds();
     StringBuilder mavenStyleClassPath = new StringBuilder();
     StringBuilder classpath = new StringBuilder();
     for (Artifact a : artifacts) {
+
+      if (excludedGroupIds.contains(a.getGroupId())) {
+        getLog().info("Excluding " + a + " from manifest's classpath");
+        continue;
+      }
+
       if (a.getArtifactHandler().isAddedToClasspath()) {
         if (Artifact.SCOPE_COMPILE.equals(a.getScope())
             || Artifact.SCOPE_RUNTIME.equals(a.getScope())) {
@@ -112,6 +127,16 @@ public class ManifestMojo extends AbstractMojo {
     }
     attributes.putValue("Class-Path", classpath.toString());
     attributes.putValue("Maven-Class-Path", mavenStyleClassPath.toString());
+  }
+
+  private Set<String> getExcludedGroupIds() {
+    if (excludeGroupIds == null || "".equals(excludeGroupIds)) { return Collections.EMPTY_SET; }
+    String[] groupIds = excludeGroupIds.split(",");
+    Set<String> rv = new HashSet<String>();
+    for (String groupId : groupIds) {
+      rv.add(groupId.trim());
+    }
+    return rv;
   }
 
   private void saveManifestFile(Manifest manifest)
