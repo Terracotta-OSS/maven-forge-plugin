@@ -1,8 +1,11 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * To change this template, choose Tools | Templates and open the template in the editor.
  */
 package org.terracotta.forge.plugin.util;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.tools.ant.Project;
+import org.apache.tools.ant.taskdefs.ExecTask;
 
 import java.io.File;
 import java.io.FileReader;
@@ -13,19 +16,13 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.tools.ant.Project;
-import org.apache.tools.ant.taskdefs.ExecTask;
-
 /**
- * 
  * @author hhuynh
  */
 public class Util {
 
   /**
    * Run a shell command and return the output as String
-   * 
    */
   public static String exec(String command, List<String> params, File workDir) {
     File outputFile;
@@ -42,8 +39,7 @@ public class Util {
     ExecTask execTask = new ExecTask();
     execTask.setProject(dummyProject);
     execTask.setOutput(outputFile);
-    execTask.setDir(workDir != null ? workDir : new File(System
-        .getProperty("user.dir")));
+    execTask.setDir(workDir != null ? workDir : new File(System.getProperty("user.dir")));
     execTask.setExecutable(command);
     if (params != null) {
       for (String param : params) {
@@ -77,10 +73,14 @@ public class Util {
   public static String getZipEntries(File file) throws IOException {
     StringBuilder buff = new StringBuilder();
     ZipFile zipFile = new ZipFile(file);
-    Enumeration<? extends ZipEntry> zipEntries = zipFile.entries();
-    while (zipEntries.hasMoreElements()) {
-      buff.append((zipEntries.nextElement().getName())).append("\n");
+    try {
+      Enumeration<? extends ZipEntry> zipEntries = zipFile.entries();
+      while (zipEntries.hasMoreElements()) {
+        buff.append((zipEntries.nextElement().getName())).append("\n");
+      }
+      return buff.toString();
+    } finally {
+      zipFile.close();
     }
-    return buff.toString();
   }
 }
