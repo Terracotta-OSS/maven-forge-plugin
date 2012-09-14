@@ -61,7 +61,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
     try {
       File tmpDir = File.createTempFile(zipFile.getName(), "exploded");
       ensureDelete(tmpDir);
-      if (!tmpDir.mkdir() || !tmpDir.isDirectory()) throw new IOException("Can't create tmp dir: " + tmpDir);
+      ensureMkdirs(tmpDir);
 
       unzip(tmpDir, zipFile);
 
