@@ -102,6 +102,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
       getLog().info("Adding " + entriesFile + " to archive " + zipFile);
       updateZip(zipFile, new File(project.getBuild().getDirectory()), "**/" + entriesFilename);
 
+      FileUtils.deleteQuietly(tmpDir);
     } catch (IOException e) {
       throw new MojoExecutionException("Error", e);
     }
