@@ -14,6 +14,7 @@ import org.apache.tools.ant.taskdefs.Zip;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.regex.Matcher;
@@ -65,6 +66,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
 
       unzip(tmpDir, zipFile);
 
+      // exploding embedded jars
       Iterator it = FileUtils.iterateFiles(tmpDir, new String[] { "jar" }, true);
       while (it.hasNext()) {
         File jar = (File) it.next();
@@ -77,6 +79,18 @@ public class ProcessToolkitMojo extends AbstractMojo {
         ensureMkdirs(jar);
         unzip(jar, renamedJar);
         ensureDelete(renamedJar);
+      }
+
+      // convert .class into .clazz under embedded resources
+      for (String subDir : Arrays.asList("ehcache", "L1", "TIMs")) {
+        File dir = new File(tmpDir, subDir);
+        if (!dir.isDirectory()) continue;
+        it = FileUtils.iterateFiles(dir, new String[] { "class" }, true);
+        while (it.hasNext()) {
+          File classFile = (File) it.next();
+          File clazzFile = new File(classFile.getParentFile(), classFile.getName().replace(".class", ".clazz"));
+          classFile.renameTo(clazzFile);
+        }
       }
 
       File tmpZip = new File(zipFile.getParent(), zipFile.getName() + ".tmp");
