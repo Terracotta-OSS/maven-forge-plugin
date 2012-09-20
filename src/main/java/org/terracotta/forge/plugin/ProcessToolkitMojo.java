@@ -51,6 +51,12 @@ public class ProcessToolkitMojo extends AbstractMojo {
   private File                 zipFile;
 
   /**
+   * @parameter expression="${privateClassSuffix}"
+   * @optional
+   */
+  private String               privateClassSuffix;
+
+  /**
    * @parameter expression="${entriesFilename}" default-value="toolkit-content.txt"
    * @optional
    */
@@ -82,14 +88,18 @@ public class ProcessToolkitMojo extends AbstractMojo {
       }
 
       // convert .class into .clazz under embedded resources
-      for (String subDir : Arrays.asList("ehcache", "L1", "TIMs")) {
-        File dir = new File(tmpDir, subDir);
-        if (!dir.isDirectory()) continue;
-        it = FileUtils.iterateFiles(dir, new String[] { "class" }, true);
-        while (it.hasNext()) {
-          File classFile = (File) it.next();
-          File clazzFile = new File(classFile.getParentFile(), classFile.getName().replace(".class", ".clazz"));
-          classFile.renameTo(clazzFile);
+      if (privateClassSuffix != null) {
+        getLog().info("Renaming private classes to use suffix " + privateClassSuffix);
+        for (String subDir : Arrays.asList("ehcache", "L1", "TIMs")) {
+          File dir = new File(tmpDir, subDir);
+          if (!dir.isDirectory()) continue;
+          it = FileUtils.iterateFiles(dir, new String[] { "class" }, true);
+          while (it.hasNext()) {
+            File classFile = (File) it.next();
+            File clazzFile = new File(classFile.getParentFile(), classFile.getName().replace(".class",
+                                                                                             privateClassSuffix));
+            classFile.renameTo(clazzFile);
+          }
         }
       }
 
