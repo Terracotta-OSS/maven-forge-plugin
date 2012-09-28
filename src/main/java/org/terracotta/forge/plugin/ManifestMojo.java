@@ -1,6 +1,5 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * To change this template, choose Tools | Templates and open the template in the editor.
  */
 package org.terracotta.forge.plugin;
 
@@ -36,17 +35,15 @@ import java.util.jar.Manifest;
  * Mojo to create manifest with build info (ie, timestamp, revision, url, etc.)
  * 
  * @author hhuynh
- * 
  * @goal manifest
  * @requiresDependencyResolution compile
  */
 public class ManifestMojo extends AbstractMojo {
 
   /**
-   * @parameter expression="${manifest.file}"
-   *            default-value="${project.build.directory}/MANIFEST.MF"
+   * @parameter expression="${manifest.file}" default-value="${project.build.directory}/MANIFEST.MF"
    */
-  private File                manifestFile;
+  private File                      manifestFile;
 
   /**
    * project instance. Injected automtically by Maven
@@ -55,26 +52,24 @@ public class ManifestMojo extends AbstractMojo {
    * @required
    * @readonly
    */
-  protected MavenProject      project;
+  protected MavenProject            project;
 
   /**
    * Extra manifest entries
    * 
    * @parameter express="${manifestEntries}"
-   * 
    */
   private final Map<String, String> manifestEntries = new HashMap<String, String>();
 
   /**
    * @parameter expression="${rootPath}
    */
-  private String              rootPath;
+  private String                    rootPath;
 
   /**
-   * 
    * @parameter expression="${addClasspath}" default-value="false"
    */
-  private boolean             addClasspath;
+  private boolean                   addClasspath;
 
   /**
    * @parameter expression="${excludeGroupIds}" default-value=""
@@ -91,10 +86,8 @@ public class ManifestMojo extends AbstractMojo {
     saveManifestFile(manifest);
   }
 
-  private void addClasspath(Attributes attributes)
-      throws MojoExecutionException {
-    if (!addClasspath)
-      return;
+  private void addClasspath(Attributes attributes) throws MojoExecutionException {
+    if (!addClasspath) return;
     @SuppressWarnings("unchecked")
     Set<Artifact> artifacts = project.getArtifacts();
 
@@ -109,14 +102,13 @@ public class ManifestMojo extends AbstractMojo {
       }
 
       if (a.getArtifactHandler().isAddedToClasspath()) {
-        if (Artifact.SCOPE_COMPILE.equals(a.getScope())
-            || Artifact.SCOPE_RUNTIME.equals(a.getScope())) {
+        if (Artifact.SCOPE_COMPILE.equals(a.getScope()) || Artifact.SCOPE_RUNTIME.equals(a.getScope())) {
           File file = a.getFile();
           if (!(file.isDirectory() && file.getName().endsWith("classes"))) {
             classpath.append(file.getName()).append(" ");
-            mavenStyleClassPath.append(
-                a.getGroupId() + ":" + a.getArtifactId() + ":" + a.getVersion()
-                    + ":" + a.getType()).append(" ");
+
+            mavenStyleClassPath.append(a.getGroupId() + ":" + a.getArtifactId() + ":" + a.getBaseVersion() + ":"
+                                           + a.getType()).append(" ");
           }
         }
       }
@@ -139,8 +131,7 @@ public class ManifestMojo extends AbstractMojo {
     return rv;
   }
 
-  private void saveManifestFile(Manifest manifest)
-      throws MojoExecutionException {
+  private void saveManifestFile(Manifest manifest) throws MojoExecutionException {
     FileOutputStream out = null;
     try {
       manifestFile.getAbsoluteFile().getParentFile().mkdirs();
@@ -172,18 +163,14 @@ public class ManifestMojo extends AbstractMojo {
   }
 
   private void addExtraManifestEntries(Attributes attributes) {
-    if (manifestEntries == null) {
-      return;
-    }
+    if (manifestEntries == null) { return; }
 
     for (Map.Entry<String, String> entry : manifestEntries.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
 
-      if ("Class-Path".equals(key)
-          && attributes.containsKey(new Name("Class-Path"))) {
-        String extendedClasspath = attributes.getValue("Class-Path") + " "
-            + value;
+      if ("Class-Path".equals(key) && attributes.containsKey(new Name("Class-Path"))) {
+        String extendedClasspath = attributes.getValue("Class-Path") + " " + value;
         attributes.putValue(key, extendedClasspath);
       } else {
         attributes.putValue(key, value);
@@ -191,8 +178,7 @@ public class ManifestMojo extends AbstractMojo {
     }
   }
 
-  private void addBuildAttributes(Attributes attributes)
-      throws MojoExecutionException {
+  private void addBuildAttributes(Attributes attributes) throws MojoExecutionException {
     final String UNKNOWN = "unknown";
     final String BUILDINFO = "BuildInfo-";
     final String urlKey = "URL: ";
@@ -202,8 +188,7 @@ public class ManifestMojo extends AbstractMojo {
     String revision = UNKNOWN;
 
     String user = System.getProperty("user.name", UNKNOWN);
-    String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss")
-        .format(new Date());
+    String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
     try {
       host = InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {
