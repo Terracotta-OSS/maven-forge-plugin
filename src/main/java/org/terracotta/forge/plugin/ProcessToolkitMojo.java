@@ -15,12 +15,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 /**
  * Used for toolkit runtime packaging:
@@ -66,6 +63,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
   public void execute() throws MojoExecutionException {
     if (!zipFile.exists()) throw new MojoExecutionException("File not found: " + zipFile);
     try {
+      StringBuilder internalJars = new StringBuilder();
       File tmpDir = File.createTempFile(zipFile.getName(), "exploded");
       ensureDelete(tmpDir);
       ensureMkdirs(tmpDir);
@@ -79,6 +77,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
         Matcher m = EMBEDDED_JARS_PATTERN.matcher(jar.getAbsolutePath());
         if (!m.matches()) continue;
         getLog().info("Exploding " + jar);
+        internalJars.append(m.group(1).replace('\\', '/')).append("\n");
         String name = jar.getName();
         File renamedJar = new File(jar.getParent(), name + ".tmp");
         ensureRename(jar, renamedJar);
@@ -103,17 +102,11 @@ public class ProcessToolkitMojo extends AbstractMojo {
         }
       }
 
-      File tmpZip = new File(zipFile.getParent(), zipFile.getName() + ".tmp");
-      zip(tmpZip, tmpDir);
-      ensureDelete(zipFile);
-      ensureRename(tmpZip, zipFile);
-
-      // generate file that holds toolkit entries
-      File entriesFile = new File(project.getBuild().getDirectory(), entriesFilename);
+      File entriesFile = new File(tmpDir, entriesFilename);
       PrintWriter pw = null;
       try {
         pw = new PrintWriter(entriesFile);
-        pw.println(collectZipEntries(zipFile));
+        pw.print(internalJars.toString());
         pw.close();
       } catch (IOException e) {
         throw new MojoExecutionException("IO error", e);
@@ -123,26 +116,16 @@ public class ProcessToolkitMojo extends AbstractMojo {
         }
       }
 
-      getLog().info("Adding " + entriesFile + " to archive " + zipFile);
-      updateZip(zipFile, new File(project.getBuild().getDirectory()), "**/" + entriesFilename);
+      File tmpZip = new File(zipFile.getParent(), zipFile.getName() + ".tmp");
+      zip(tmpZip, tmpDir);
+      ensureDelete(zipFile);
+      ensureRename(tmpZip, zipFile);
 
       FileUtils.deleteQuietly(tmpDir);
     } catch (IOException e) {
       throw new MojoExecutionException("Error", e);
     }
 
-  }
-
-  private void updateZip(File zip, File basedir, String includes) {
-    Project dummyProject = new Project();
-    dummyProject.init();
-    Zip zipTask = new Zip();
-    zipTask.setProject(dummyProject);
-    zipTask.setUpdate(true);
-    zipTask.setBasedir(new File(project.getBuild().getDirectory()));
-    zipTask.setIncludes("**/" + entriesFilename);
-    zipTask.setDestFile(zipFile);
-    zipTask.execute();
   }
 
   private void unzip(File dest, File source) {
@@ -178,27 +161,9 @@ public class ProcessToolkitMojo extends AbstractMojo {
     from.delete();
   }
 
-  private String collectZipEntries(File file) throws IOException {
-    StringBuilder buff = new StringBuilder();
-    ZipFile zip = new ZipFile(file);
-    try {
-      Enumeration<? extends ZipEntry> zipEntries = zip.entries();
-      while (zipEntries.hasMoreElements()) {
-        String entry = zipEntries.nextElement().getName();
-        Matcher m = EMBEDDED_JARS_PATTERN.matcher(entry);
-        if (m.matches()) {
-          buff.append(entry).append("\n");
-        }
-      }
-      return buff.toString();
-    } finally {
-      zip.close();
-    }
-  }
-
   private static String createToolkitEmbeddedJarsRegex() {
     String pathRegex = "[\\\\/]";
     String notPathRegex = "[^\\\\/]";
-    return ".*" + pathRegex + "?[(ehcache)(L1)(TIMs)]" + pathRegex + notPathRegex + "+\\.jar" + pathRegex + "?";
+    return ".*" + pathRegex + "?(((ehcache)|(L1)|(TIMs))" + pathRegex + notPathRegex + "+\\.jar)" + pathRegex + "?";
   }
 }
