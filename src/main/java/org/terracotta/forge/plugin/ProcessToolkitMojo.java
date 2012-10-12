@@ -59,19 +59,17 @@ public class ProcessToolkitMojo extends AbstractMojo {
    */
   private String               entriesFilename;
 
-  @Override
   public void execute() throws MojoExecutionException {
     if (!zipFile.exists()) throw new MojoExecutionException("File not found: " + zipFile);
     try {
       StringBuilder internalJars = new StringBuilder();
-      File tmpDir = File.createTempFile(zipFile.getName(), "exploded");
-      ensureDelete(tmpDir);
-      ensureMkdirs(tmpDir);
+      File packagingDir = new File(project.getBuild().getDirectory(), "packaging");
+      ensureMkdirs(packagingDir);
 
-      unzip(tmpDir, zipFile);
+      unzip(packagingDir, zipFile);
 
       // exploding embedded jars
-      Iterator it = FileUtils.iterateFiles(tmpDir, new String[] { "jar" }, true);
+      Iterator it = FileUtils.iterateFiles(packagingDir, new String[] { "jar" }, true);
       while (it.hasNext()) {
         File jar = (File) it.next();
         Matcher m = EMBEDDED_JARS_PATTERN.matcher(jar.getAbsolutePath());
@@ -90,7 +88,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
       if (privateClassSuffix != null) {
         getLog().info("Renaming private classes to use suffix " + privateClassSuffix);
         for (String subDir : Arrays.asList("ehcache", "L1", "TIMs")) {
-          File dir = new File(tmpDir, subDir);
+          File dir = new File(packagingDir, subDir);
           if (!dir.isDirectory()) continue;
           it = FileUtils.iterateFiles(dir, new String[] { "class" }, true);
           while (it.hasNext()) {
@@ -102,7 +100,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
         }
       }
 
-      File entriesFile = new File(tmpDir, entriesFilename);
+      File entriesFile = new File(packagingDir, entriesFilename);
       PrintWriter pw = null;
       try {
         pw = new PrintWriter(entriesFile);
@@ -117,11 +115,11 @@ public class ProcessToolkitMojo extends AbstractMojo {
       }
 
       File tmpZip = new File(zipFile.getParent(), zipFile.getName() + ".tmp");
-      zip(tmpZip, tmpDir);
+      zip(tmpZip, packagingDir);
       ensureDelete(zipFile);
       ensureRename(tmpZip, zipFile);
 
-      FileUtils.deleteQuietly(tmpDir);
+      FileUtils.deleteQuietly(packagingDir);
     } catch (IOException e) {
       throw new MojoExecutionException("Error", e);
     }

@@ -7,7 +7,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.terracotta.forge.plugin.util.Util;
 
@@ -76,8 +75,7 @@ public class ManifestMojo extends AbstractMojo {
    */
   private String                    excludeGroupIds;
 
-  @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
+  public void execute() throws MojoExecutionException {
     Manifest manifest = createOrLoadManifest();
     Attributes attributes = manifest.getMainAttributes();
     addClasspath(attributes);
@@ -86,7 +84,7 @@ public class ManifestMojo extends AbstractMojo {
     saveManifestFile(manifest);
   }
 
-  private void addClasspath(Attributes attributes) throws MojoExecutionException {
+  private void addClasspath(Attributes attributes) {
     if (!addClasspath) return;
     @SuppressWarnings("unchecked")
     Set<Artifact> artifacts = project.getArtifacts();
