@@ -151,10 +151,10 @@ public class BuildInfoMojo extends AbstractMojo {
    
     String fullRevision = revision;
     // we use the template EE_REVISION-OS_REVISION
-    if (!"unknown".equals(eeRevision)) {
+    if (!UNKNOWN.equals(eeRevision)) {
       fullRevision = eeRevision + "-" + revision;
     }
-    if (!"unknown".equals(osRevision)) {
+    if (!UNKNOWN.equals(osRevision)) {
       fullRevision = revision + "-" + osRevision;
     }
     
