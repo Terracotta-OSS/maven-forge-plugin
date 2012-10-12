@@ -6,7 +6,6 @@ package org.terracotta.forge.plugin;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.terracotta.forge.plugin.util.Util;
 
@@ -63,8 +62,7 @@ public class BuildInfoMojo extends AbstractMojo {
 	/**
    * 
    */
-	@Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
+  public void execute() throws MojoExecutionException {
 		String svnUrl = UNKNOWN;
 		String revision = UNKNOWN;
     String eeSvnUrl = UNKNOWN;
@@ -153,13 +151,14 @@ public class BuildInfoMojo extends AbstractMojo {
    
     String fullRevision = revision;
     // we use the template EE_REVISION-OS_REVISION
-    if (eeRootPath != null) {
+    if (!"unknown".equals(eeRevision)) {
       fullRevision = eeRevision + "-" + revision;
     }
-    if (osRootPath != null) {
+    if (!"unknown".equals(osRevision)) {
       fullRevision = revision + "-" + osRevision;
     }
     
+
     getLog().debug("Setting build.revision to " + fullRevision);
     getLog().debug("Setting build.svn.url to " + svnUrl);
     
