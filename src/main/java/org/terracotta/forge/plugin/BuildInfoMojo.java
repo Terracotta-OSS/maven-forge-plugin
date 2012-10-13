@@ -135,6 +135,7 @@ public class BuildInfoMojo extends AbstractMojo {
 
 		project.getProperties().setProperty("build.user", user);
 		project.getProperties().setProperty("build.host", host);
+    project.getProperties().setProperty("build.hostname", host);
 		project.getProperties().setProperty("build.timestamp", timestamp);
 		
 		if (eeRootPath != null) {
