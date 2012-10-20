@@ -153,14 +153,14 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
                                                                              Collections.EMPTY_LIST);
 
       Set<Artifact> enforceArtifacts = filterCompileAndRuntimeScope(result.getArtifacts());
-      getLog().info("enforce artifacts before exclusions: " + enforceArtifacts);
+      getLog().debug("enforce artifacts before exclusions: " + enforceArtifacts);
       if (excludeGroupIds != null) {
         enforceArtifacts = filterExcludeGroupIds(enforceArtifacts, excludeGroupIds);
-        getLog().info("enforce artifacts after exclusions: " + enforceArtifacts);
+        getLog().debug("enforce artifacts after exclusions: " + enforceArtifacts);
       }
 
       Set<Artifact> thisProjectartifacts = filterCompileAndRuntimeScope(project.getArtifacts());
-      getLog().info("current artifacts: " + thisProjectartifacts);
+      getLog().debug("current artifacts: " + thisProjectartifacts);
 
       // enforce artifacts should be a subset of this project's artifacts
       if (!thisProjectartifacts.containsAll(enforceArtifacts)) {
