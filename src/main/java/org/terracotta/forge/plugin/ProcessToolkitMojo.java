@@ -151,7 +151,7 @@ public class ProcessToolkitMojo extends AbstractMojo {
   }
 
   private void ensureMkdirs(File f) throws IOException {
-    if (!f.mkdirs() || !f.isDirectory()) throw new IOException("Failed to mkdirs " + f);
+    if (!f.isDirectory() && !f.mkdirs()) throw new IOException("Failed to mkdirs " + f);
   }
 
   private void ensureRename(File from, File to) throws IOException {
