@@ -54,14 +54,14 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
   private String               privateClassSuffix;
 
   /**
-   * @parameter expression="${entriesFilename}" default-value="toolkit-content.txt"
+   * @parameter expression="${toolkitContentFilename}" default-value="toolkit-content.txt"
    * @optional
    */
-  private String               entriesFilename;
+  private String               toolkitContentFilename;
 
   public void execute() throws MojoExecutionException {
     if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
-    File entriesFile = new File(packagingDir, entriesFilename);
+    File entriesFile = new File(packagingDir, toolkitContentFilename);
     if (entriesFile.exists()) {
       getLog().info("Embedded jars have been exploded... skipping");
       return;
