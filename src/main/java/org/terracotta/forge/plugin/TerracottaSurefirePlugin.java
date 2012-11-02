@@ -3,25 +3,6 @@
  */
 package org.terracotta.forge.plugin;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.jar.JarInputStream;
-import java.util.jar.Manifest;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -36,10 +17,28 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Exclusion;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.surefire.Summary;
 import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugin.surefire.SurefirePlugin;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.surefire.booter.SurefireBooterForkException;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TerracottaSurefirePlugin extends SurefirePlugin {
 
@@ -754,6 +753,25 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
 
   private enum ArtifactType {
     TIM, RUNTIME;
+  }
+  
+  @Override
+  protected void handleSummary(Summary summary) throws MojoExecutionException, MojoFailureException {
+    try {
+      super.handleSummary(summary);
+    } catch (MojoExecutionException e) {
+      if (this.isTestFailureIgnore()) {
+        getLog().error(e);
+      } else {
+        throw e;
+      }
+    } catch (MojoFailureException e) {
+      if (this.isTestFailureIgnore()) {
+        getLog().error(e);
+      } else {
+        throw e;
+      }
+    }
   }
 
 }
