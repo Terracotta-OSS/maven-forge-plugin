@@ -59,7 +59,17 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
    */
   private String               toolkitContentFilename;
 
+  /**
+   * @parameter expresssion=${skip} default-value="false"
+   * @optional
+   */
+  private boolean              skip;
+
   public void execute() throws MojoExecutionException {
+    if (skip) {
+      getLog().info("Skipping toolkit content packaging");
+      return;
+    }
     if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
     File entriesFile = new File(packagingDir, toolkitContentFilename);
     if (entriesFile.exists()) {
