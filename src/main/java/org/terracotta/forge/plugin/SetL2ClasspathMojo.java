@@ -1,26 +1,28 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * To change this template, choose Tools | Templates and open the template in the editor.
  */
 package org.terracotta.forge.plugin;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Set;
-import java.util.jar.JarInputStream;
-import java.util.jar.Manifest;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Set;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
 /**
- * Set L2 (terracotta-xxx.jar or terracotta-ee-xxx.jar) classpath to Maven
- * properties
+ * Set L2 (terracotta-xxx.jar or terracotta-ee-xxx.jar) classpath to Maven properties
  * 
  * @author hhuynh
  * @goal setl2classpath
@@ -37,8 +39,8 @@ public class SetL2ClasspathMojo extends AbstractMojo {
   protected MavenProject     project;
 
   /**
-   * ArtifactRepository of the localRepository. To obtain the directory of
-   * localRepository in unit tests use System.getProperty("localRepository").
+   * ArtifactRepository of the localRepository. To obtain the directory of localRepository in unit tests use
+   * System.getProperty("localRepository").
    * 
    * @parameter expression="${localRepository}"
    * @required
@@ -49,17 +51,16 @@ public class SetL2ClasspathMojo extends AbstractMojo {
   /**
    * 
    */
-  public void execute() throws MojoExecutionException, MojoFailureException {
+  public void execute() throws MojoExecutionException {
     File terracottaJarFile = getTerracottaJar();
-    getLog().info("Terracotta jar file: " + terracottaJarFile);
-    if (terracottaJarFile == null) {
-      throw new MojoExecutionException("Couldn't find Terracotta core artifact");
-    }
+    if (terracottaJarFile == null) { throw new MojoExecutionException("Couldn't find Terracotta core artifact"); }
     try {
-      getLog().debug(
-          "Setting L2 classpath to system property tc.tests.info.l2.classpath");
-      project.getProperties().put("tc.tests.info.l2.classpath",
-          getTerracottaClassPath(terracottaJarFile));
+      String l2Classppath = getTerracottaClassPath(terracottaJarFile);
+      if (Boolean.valueOf(project.getProperties().getProperty("devmode"))) {
+        l2Classppath = generateDevModeClasspath(terracottaJarFile) + l2Classppath;
+      }
+      getLog().debug("Setting tc.tests.info.l2.classpath to: " + l2Classppath);
+      project.getProperties().put("tc.tests.info.l2.classpath", l2Classppath);
     } catch (Exception e) {
       throw new MojoExecutionException("Error trying to find L2 classpath", e);
     }
@@ -70,11 +71,8 @@ public class SetL2ClasspathMojo extends AbstractMojo {
     Set<Artifact> artifacts = project.getDependencyArtifacts();
 
     for (Artifact a : artifacts) {
-      if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals(
-          "terracotta-ee"))
-          && a.getGroupId().equals("org.terracotta")) {
-        return a.getFile();
-      }
+      if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals("terracotta-ee"))
+          && a.getGroupId().equals("org.terracotta")) { return a.getFile(); }
     }
     return null;
   }
@@ -88,26 +86,17 @@ public class SetL2ClasspathMojo extends AbstractMojo {
    */
   private File getArtifactFile(String artifactCoordinate) throws IOException {
     String[] coords = artifactCoordinate.split(":");
-    if (coords.length != 4) {
-      throw new RuntimeException(
-          "Coordinate doesn't match template [groupId:artifactId:version:type]: "
-              + artifactCoordinate);
-    }
+    if (coords.length != 4) { throw new RuntimeException(
+                                                         "Coordinate doesn't match template [groupId:artifactId:version:type]: "
+                                                             + artifactCoordinate); }
     String groupId = coords[0];
     String artifactId = coords[1];
     String version = coords[2];
     String type = coords[3];
 
-    File artifactFile = new File(localRepository.getBasedir(), groupId.replace(
-        '.', '/')
-        + "/"
-        + artifactId
-        + "/"
-        + version
-        + "/"
-        + artifactId
-        + "-"
-        + version + "." + type);
+    File artifactFile = new File(localRepository.getBasedir(), groupId.replace('.', '/') + "/" + artifactId + "/"
+                                                               + version + "/" + artifactId + "-" + version + "."
+                                                               + type);
 
     return artifactFile.getCanonicalFile();
   }
@@ -119,12 +108,10 @@ public class SetL2ClasspathMojo extends AbstractMojo {
       in = new FileInputStream(terracottaJar);
       JarInputStream jarStream = new JarInputStream(in);
       manifest = jarStream.getManifest();
-      String mavenClassPath = manifest.getMainAttributes().getValue(
-          "Maven-Class-Path");
-      if (mavenClassPath == null) {
-        throw new Exception("Coudln't find Maven-Class-Path in manifest of "
-            + terracottaJar);
-      }
+      jarStream.close();
+      String mavenClassPath = manifest.getMainAttributes().getValue("Maven-Class-Path");
+      if (mavenClassPath == null) { throw new Exception("Coudln't find Maven-Class-Path in manifest of "
+                                                        + terracottaJar); }
       StringBuilder sb = new StringBuilder();
       sb.append(terracottaJar);
 
@@ -137,13 +124,39 @@ public class SetL2ClasspathMojo extends AbstractMojo {
       }
       return sb.toString();
     } finally {
-      if (in != null) {
-        try {
-          in.close();
-        } catch (IOException e) {
-          // ignore
+      IOUtils.closeQuietly(in);
+    }
+  }
+
+  private String generateDevModeClasspath(File terracottaJarFile) throws IOException {
+    ZipFile zip = new ZipFile(terracottaJarFile);
+    ZipEntry devmodeClassDir = zip.getEntry("devmode-classdir.txt");
+    if (devmodeClassDir == null) {
+      getLog().warn("devmode is on but couldn't find devmode-classdir.txt inside terracotta jar" + terracottaJarFile);
+      zip.close();
+      return "";
+    }
+    StringBuilder sb = new StringBuilder();
+    BufferedReader reader = null;
+    try {
+      reader = new BufferedReader(new InputStreamReader(zip.getInputStream(devmodeClassDir)));
+      String line = null;
+      while ((line = reader.readLine()) != null) {
+        line = line.trim();
+        if (line.length() == 0) continue;
+        for (String part : line.split(File.pathSeparator)) {
+          String path = part.trim();
+          if (path.length() == 0) continue;
+          File file = new File(path);
+          sb.append(file.getCanonicalPath()).append(File.pathSeparator);
         }
       }
+      return sb.toString();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    } finally {
+      zip.close();
+      IOUtils.closeQuietly(reader);
     }
   }
 }
