@@ -202,7 +202,9 @@ public class BuildInfoMojo extends AbstractMojo {
   private void generateBuildInfoFile() throws MojoExecutionException {
     PrintWriter out = null;
     try {
-      out = new PrintWriter(new File(buildInfoLocation, "build-info.properties"));
+      File buildInfoFile = new File(buildInfoLocation, "build-info.properties");
+      buildInfoFile.getParentFile().mkdirs();
+      out = new PrintWriter(buildInfoFile);
       buildInfoProps.list(out);
     } catch (IOException e) {
       throw new MojoExecutionException("IO Error:", e);
