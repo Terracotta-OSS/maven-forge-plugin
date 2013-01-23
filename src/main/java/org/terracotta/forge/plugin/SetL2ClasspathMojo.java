@@ -5,7 +5,9 @@ package org.terracotta.forge.plugin;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
@@ -15,6 +17,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.Set;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
@@ -47,6 +50,29 @@ public class SetL2ClasspathMojo extends AbstractMojo {
    * @readonly
    */
   private ArtifactRepository localRepository;
+
+  /**
+   * Creates the artifact.
+   * 
+   * @component
+   */
+  private ArtifactFactory    artifactFactory;
+
+  /**
+   * The remote plugin repositories declared in the POM.
+   * 
+   * @parameter expression="${project.remoteArtifactRepositories}"
+   * @since 2.2
+   */
+  @SuppressWarnings("rawtypes")
+  private List               remoteRepositories;
+
+  /**
+   * Resolves the artifacts needed.
+   * 
+   * @component
+   */
+  private ArtifactResolver   artifactResolver;
 
   /**
    * 
@@ -84,7 +110,7 @@ public class SetL2ClasspathMojo extends AbstractMojo {
    * @return
    * @throws IOException
    */
-  private File getArtifactFile(String artifactCoordinate) throws IOException {
+  private File getArtifactFile(String artifactCoordinate) throws Exception {
     String[] coords = artifactCoordinate.split(":");
     if (coords.length != 4) { throw new RuntimeException(
                                                          "Coordinate doesn't match template [groupId:artifactId:version:type]: "
@@ -94,9 +120,15 @@ public class SetL2ClasspathMojo extends AbstractMojo {
     String version = coords[2];
     String type = coords[3];
 
+    Artifact artifact = artifactFactory.createArtifact(groupId, artifactId, version, "test", type);
+    getLog().debug("XXX resolving L2 classpath element " + artifactCoordinate);
+    artifactResolver.resolveAlways(artifact, remoteRepositories, localRepository);
+
     File artifactFile = new File(localRepository.getBasedir(), groupId.replace('.', '/') + "/" + artifactId + "/"
                                                                + version + "/" + artifactId + "-" + version + "."
                                                                + type);
+
+    if (!artifactFile.exists()) throw new RuntimeException("Failed to resolve artifact: " + artifactCoordinate);
 
     return artifactFile.getCanonicalFile();
   }
