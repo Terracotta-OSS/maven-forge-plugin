@@ -5,7 +5,7 @@
   <groupId>org.terracotta</groupId>
   <artifactId>maven-forge-plugin</artifactId>
   <packaging>maven-plugin</packaging>
-  <version>1.0.7-SNAPSHOT</version>
+  <version>1.0.7</version>
   <name>maven-forge-plugin</name>
   <description>Util plugin for Terracotta Forge projects</description>
   <url>http://forge.terracotta.org</url>
@@ -40,11 +40,6 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>1.4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-plugin-api</artifactId>
-      <version>2.2.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugins</groupId>
@@ -93,6 +88,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.0</version>
         <configuration>
           <source>1.5</source>
           <target>1.5</target>
