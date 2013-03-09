@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.terracotta</groupId>
@@ -12,6 +13,16 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.jcabi</groupId>
+      <artifactId>jcabi-aether</artifactId>
+      <version>0.7.13</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.7.2</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-api</artifactId>
       <version>2.2.1</version>
@@ -20,11 +31,19 @@
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-core</artifactId>
       <version>2.2.1</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>slf4j-jdk14</artifactId>
+          <groupId>org.slf4j</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-project</artifactId>
       <version>2.2.1</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.ant</groupId>
@@ -46,24 +65,24 @@
       <artifactId>maven-surefire-plugin</artifactId>
       <version>2.10</version>
       <type>maven-plugin</type>
-	    <exclusions>
-	      <exclusion>
-		      <groupId>org.codehaus.mojo</groupId>
-		      <artifactId>findbugs-maven-plugin</artifactId>
-	      </exclusion>
-	    </exclusions>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
       <version>2.1</version>
-	    <exclusions>
-	      <exclusion>
-		      <groupId>org.codehaus.mojo</groupId>
-		      <artifactId>findbugs-maven-plugin</artifactId>
-	      </exclusion>
-	    </exclusions>        
-    </dependency>  
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -75,12 +94,12 @@
       <artifactId>maven-plugin-testing-harness</artifactId>
       <version>1.2</version>
       <scope>test</scope>
-	    <exclusions>
-	      <exclusion>
-		      <groupId>org.codehaus.mojo</groupId>
-		      <artifactId>findbugs-maven-plugin</artifactId>
-	      </exclusion>
-	    </exclusions>      
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 
@@ -110,20 +129,20 @@
       </plugins>
     </pluginManagement>
   </build>
-  
- <distributionManagement>
-   <repository>
-     <id>terracotta-releases</id>
-     <name>terracotta-releases</name>
-     <url>http://nexus:8080/content/repositories/terracotta-releases</url>
-   </repository>
-   <snapshotRepository>
-     <id>terracotta-snapshots</id>
-     <name>terracotta-snapshots</name>
-     <uniqueVersion>false</uniqueVersion>
-     <url>http://nexus:8080/content/repositories/terracotta-snapshots</url>
-   </snapshotRepository>
- </distributionManagement>
 
-  
+  <distributionManagement>
+    <repository>
+      <id>terracotta-releases</id>
+      <name>terracotta-releases</name>
+      <url>http://nexus:8080/content/repositories/terracotta-releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>terracotta-snapshots</id>
+      <name>terracotta-snapshots</name>
+      <uniqueVersion>false</uniqueVersion>
+      <url>http://nexus:8080/content/repositories/terracotta-snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+
 </project>
