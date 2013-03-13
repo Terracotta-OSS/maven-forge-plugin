@@ -78,7 +78,7 @@ public class ListArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
   }
 
   private void printDeps(Collection<Artifact> deps, PrintStream out) throws MalformedURLException {
-    if (!"".equals(comment)) {
+    if (comment != null && !"".equals(comment)) {
       out.println("#" + comment);
     }
     for (Artifact a : deps) {
