@@ -36,7 +36,7 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    * @required
    * @readonly
    */
-  protected MavenProject          project;
+  protected MavenProject            project;
 
   /**
    * @parameter default-value="${repositorySystemSession}"
@@ -75,14 +75,30 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    */
   protected boolean                 resolveTransitively;
 
+  /**
+   * don't resolve, just output whatever configured, useful when we only want to append to output what we know
+   * <p>
+   * However, you won't be able to get output listed as file
+   * </p>
+   * 
+   * @parameter expression="${doNotResolve}" default-value="false"
+   */
+  protected boolean                 doNotResolve;
+
   protected Collection<Artifact> resolve() throws MojoExecutionException {
     File repo = this.session.getLocalRepository().getBasedir();
     PrintStream out = null;
     try {
       Aether aether = new Aether(project, repo.getAbsolutePath());
       Collection<Artifact> deps = new ArrayList<Artifact>();
-      for (String artifact : artifacts) {
-        deps.addAll(aether.resolve(new DefaultArtifact(artifact), JavaScopes.RUNTIME));
+      if (doNotResolve) {
+        for (String artifact : artifacts) {
+          deps.add(new DefaultArtifact(artifact));
+        }
+      } else {
+        for (String artifact : artifacts) {
+          deps.addAll(aether.resolve(new DefaultArtifact(artifact), JavaScopes.RUNTIME));
+        }
       }
 
       if (!resolveTransitively) {

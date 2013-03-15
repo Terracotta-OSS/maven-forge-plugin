@@ -28,6 +28,13 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
   private File                    outputDir;
 
   /**
+   * remove version from artifact filename
+   * 
+   * @parameter expression="${removeVersion}" default-value="false"
+   */
+  private boolean removeVersion;
+
+  /**
    * copy dependencies
    */
   public void execute() throws MojoExecutionException {
@@ -44,6 +51,9 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
       String filename = a.getFile().getName();
       if (a.isSnapshot()) {
         filename = a.getArtifactId() + "-" + a.getBaseVersion() + "." + a.getExtension();
+      }
+      if (removeVersion) {
+        filename = a.getArtifactId() + "." + a.getExtension();
       }
       File destFile = new File(outputDir, filename);
       FileUtils.copyFile(a.getFile(), destFile);
