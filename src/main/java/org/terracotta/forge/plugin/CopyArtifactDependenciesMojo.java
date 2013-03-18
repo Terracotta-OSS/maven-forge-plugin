@@ -56,6 +56,9 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
         filename = a.getArtifactId() + "." + a.getExtension();
       }
       File destFile = new File(outputDir, filename);
+      if (destFile.exists()) {
+        FileUtils.deleteQuietly(destFile);
+      }
       FileUtils.copyFile(a.getFile(), destFile);
     }
   }
