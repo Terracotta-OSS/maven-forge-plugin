@@ -10,11 +10,13 @@ import org.sonatype.aether.RepositorySystemSession;
 import org.sonatype.aether.artifact.Artifact;
 import org.sonatype.aether.collection.CollectRequest;
 import org.sonatype.aether.graph.Dependency;
+import org.sonatype.aether.graph.DependencyFilter;
 import org.sonatype.aether.repository.RemoteRepository;
 import org.sonatype.aether.resolution.ArtifactResult;
 import org.sonatype.aether.resolution.DependencyRequest;
 import org.sonatype.aether.util.artifact.DefaultArtifact;
 import org.sonatype.aether.util.artifact.JavaScopes;
+import org.sonatype.aether.util.filter.DependencyFilterUtils;
 
 import com.jcabi.aether.Aether;
 
@@ -148,11 +150,11 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
   }
 
   protected Collection<Artifact> resolveArtifact(Artifact artifact) throws Exception {
-    // DependencyFilter classpathFlter = DependencyFilterUtils.classpathFilter(JavaScopes.RUNTIME);
+    DependencyFilter classpathFlter = DependencyFilterUtils.classpathFilter(JavaScopes.RUNTIME);
     CollectRequest collectRequest = new CollectRequest();
     collectRequest.setRoot(new Dependency(artifact, JavaScopes.RUNTIME));
     collectRequest.setRepositories(remoteRepos);
-    DependencyRequest dependencyRequest = new DependencyRequest(collectRequest, null);
+    DependencyRequest dependencyRequest = new DependencyRequest(collectRequest, classpathFlter);
     List<ArtifactResult> artifactResults = system.resolveDependencies(session, dependencyRequest).getArtifactResults();
     Collection<Artifact> resolvedArtifacts = new ArrayList<Artifact>();
     for (ArtifactResult artifactResult : artifactResults) {
