@@ -3,19 +3,22 @@
  */
 package org.terracotta.forge.plugin;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.sonatype.aether.RepositorySystem;
 import org.sonatype.aether.RepositorySystemSession;
 import org.sonatype.aether.artifact.Artifact;
+import org.sonatype.aether.collection.CollectRequest;
+import org.sonatype.aether.graph.Dependency;
+import org.sonatype.aether.repository.RemoteRepository;
+import org.sonatype.aether.resolution.ArtifactResult;
+import org.sonatype.aether.resolution.DependencyRequest;
 import org.sonatype.aether.util.artifact.DefaultArtifact;
 import org.sonatype.aether.util.artifact.JavaScopes;
 
 import com.jcabi.aether.Aether;
 
 import java.io.File;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,6 +46,19 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    * @readonly
    */
   protected RepositorySystemSession session;
+
+  /**
+   * @component
+   */
+  private RepositorySystem          system;
+
+  /**
+   * The project's remote repositories to use for the resolution.
+   * 
+   * @parameter default-value="${project.remoteProjectRepositories}"
+   * @readonly
+   */
+  private List<RemoteRepository>    remoteRepos;
 
   /**
    * artifact groupId:artifactId:version
@@ -85,36 +101,64 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    */
   protected boolean                 doNotResolve;
 
-  protected Collection<Artifact> resolve() throws MojoExecutionException {
+  protected Collection<Artifact> resolve0() throws Exception {
     File repo = this.session.getLocalRepository().getBasedir();
-    PrintStream out = null;
-    try {
-      Aether aether = new Aether(project, repo.getAbsolutePath());
-      Collection<Artifact> deps = new ArrayList<Artifact>();
-      if (doNotResolve) {
-        for (String artifact : artifacts) {
-          deps.add(new DefaultArtifact(artifact));
-        }
-      } else {
-        for (String artifact : artifacts) {
-          deps.addAll(aether.resolve(new DefaultArtifact(artifact), JavaScopes.RUNTIME));
-        }
+    Aether aether = new Aether(project, repo.getAbsolutePath());
+    Collection<Artifact> deps = new ArrayList<Artifact>();
+    if (doNotResolve) {
+      for (String artifact : artifacts) {
+        deps.add(new DefaultArtifact(artifact));
       }
-
-      if (!resolveTransitively) {
-        retainOriginalArtifacts(deps);
+    } else {
+      for (String artifact : artifacts) {
+        deps.addAll(aether.resolve(new DefaultArtifact(artifact), JavaScopes.RUNTIME));
       }
-
-      excludeGroupIds(deps);
-      excludeArtifactIds(deps);
-
-      return deps;
-
-    } catch (Exception e) {
-      throw new MojoExecutionException(e.getMessage(), e);
-    } finally {
-      IOUtils.closeQuietly(out);
     }
+
+    if (!resolveTransitively) {
+      retainOriginalArtifacts(deps);
+    }
+
+    excludeGroupIds(deps);
+    excludeArtifactIds(deps);
+
+    return deps;
+  }
+
+  protected Collection<Artifact> resolve() throws Exception {
+    Collection<Artifact> deps = new ArrayList<Artifact>();
+    if (doNotResolve) {
+      for (String artifact : artifacts) {
+        deps.add(new DefaultArtifact(artifact));
+      }
+    } else {
+      for (String artifact : artifacts) {
+        deps.addAll(resolveArtifact(new DefaultArtifact(artifact)));
+      }
+    }
+
+    if (!resolveTransitively) {
+      retainOriginalArtifacts(deps);
+    }
+
+    excludeGroupIds(deps);
+    excludeArtifactIds(deps);
+
+    return deps;
+  }
+
+  protected Collection<Artifact> resolveArtifact(Artifact artifact) throws Exception {
+    // DependencyFilter classpathFlter = DependencyFilterUtils.classpathFilter(JavaScopes.RUNTIME);
+    CollectRequest collectRequest = new CollectRequest();
+    collectRequest.setRoot(new Dependency(artifact, JavaScopes.RUNTIME));
+    collectRequest.setRepositories(remoteRepos);
+    DependencyRequest dependencyRequest = new DependencyRequest(collectRequest, null);
+    List<ArtifactResult> artifactResults = system.resolveDependencies(session, dependencyRequest).getArtifactResults();
+    Collection<Artifact> resolvedArtifacts = new ArrayList<Artifact>();
+    for (ArtifactResult artifactResult : artifactResults) {
+      resolvedArtifacts.add(artifactResult.getArtifact());
+    }
+    return resolvedArtifacts;
   }
 
   private void excludeGroupIds(Collection<Artifact> deps) {
