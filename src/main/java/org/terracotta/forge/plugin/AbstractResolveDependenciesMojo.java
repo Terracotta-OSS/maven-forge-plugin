@@ -18,9 +18,6 @@ import org.sonatype.aether.util.artifact.DefaultArtifact;
 import org.sonatype.aether.util.artifact.JavaScopes;
 import org.sonatype.aether.util.filter.DependencyFilterUtils;
 
-import com.jcabi.aether.Aether;
-
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -102,30 +99,6 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    * @parameter expression="${doNotResolve}" default-value="false"
    */
   protected boolean                 doNotResolve;
-
-  protected Collection<Artifact> resolve0() throws Exception {
-    File repo = this.session.getLocalRepository().getBasedir();
-    Aether aether = new Aether(project, repo.getAbsolutePath());
-    Collection<Artifact> deps = new ArrayList<Artifact>();
-    if (doNotResolve) {
-      for (String artifact : artifacts) {
-        deps.add(new DefaultArtifact(artifact));
-      }
-    } else {
-      for (String artifact : artifacts) {
-        deps.addAll(aether.resolve(new DefaultArtifact(artifact), JavaScopes.RUNTIME));
-      }
-    }
-
-    if (!resolveTransitively) {
-      retainOriginalArtifacts(deps);
-    }
-
-    excludeGroupIds(deps);
-    excludeArtifactIds(deps);
-
-    return deps;
-  }
 
   protected Collection<Artifact> resolve() throws Exception {
     Collection<Artifact> deps = new ArrayList<Artifact>();

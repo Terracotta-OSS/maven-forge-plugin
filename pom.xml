@@ -13,9 +13,16 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.jcabi</groupId>
-      <artifactId>jcabi-aether</artifactId>
-      <version>0.7.14</version>
+      <!-- required in all cases -->
+      <groupId>org.sonatype.aether</groupId>
+      <artifactId>aether-api</artifactId>
+      <version>1.13.1</version>
+    </dependency>
+    <dependency>
+      <!-- might be superfluous depending on your use case -->
+      <groupId>org.sonatype.aether</groupId>
+      <artifactId>aether-util</artifactId>
+      <version>1.13.1</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
