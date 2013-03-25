@@ -72,10 +72,6 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
     }
     if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
     File entriesFile = new File(packagingDir, toolkitContentFilename);
-    if (entriesFile.exists()) {
-      getLog().info("Embedded jars have been exploded... skipping");
-      return;
-    }
     try {
       StringBuilder internalJars = new StringBuilder();
 
