@@ -45,8 +45,18 @@ public class SAGFinderMojo extends AbstractMojo {
    */
   private String                   excludeArtifactIds;
 
+  /**
+   * @parameter expression="{onlyRunWhenSagDepsIsTrue}" default-value="false"
+   * @optional
+   */
+  private boolean        onlyRunWhenSagDepsIsTrue;
+
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public void execute() throws MojoExecutionException {
+    if (onlyRunWhenSagDepsIsTrue && !Boolean.getBoolean("sag-deps")) {
+      getLog().info("Skipped condition found: onlyRunWhenSagDepsIsTrue = true and sag-deps = false");
+      return;
+    }
     try {
       Set<Artifact> artifacts = filterCompileAndRuntimeScope(project.getArtifacts());
       artifacts = filterExcludeGroupIds(artifacts, excludeGroupIds);
