@@ -74,7 +74,6 @@ public class SAGFinderMojo extends AbstractMojo {
       return;
     }
     try {
-      getLog().info("scanDirecotry " + scanDirectory);
       if (!isEmpty(scanDirectory)) {
         doScanDirectory();
       } else {
