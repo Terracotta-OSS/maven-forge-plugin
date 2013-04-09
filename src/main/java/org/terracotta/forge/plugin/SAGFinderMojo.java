@@ -31,25 +31,41 @@ public class SAGFinderMojo extends AbstractMojo {
    * @required
    * @readonly
    */
-  protected MavenProject           project;
+  protected MavenProject project;
 
   /**
    * @parameter expression="{excludeGroupIds}"
    * @optional
    */
-  private String                   excludeGroupIds;
+  private String         excludeGroupIds;
 
   /**
    * @parameter expression="{excludeArtifactIds}"
    * @optional
    */
-  private String                   excludeArtifactIds;
+  private String         excludeArtifactIds;
 
   /**
    * @parameter expression="{onlyRunWhenSagDepsIsTrue}" default-value="false"
    * @optional
    */
   private boolean        onlyRunWhenSagDepsIsTrue;
+
+  /**
+   * Directory that would be scanned by Finder. If this is specify then dependencies of the project won't be scanned
+   * 
+   * @parameter expression="{scanDirectory}"
+   * @optional
+   */
+  private String         scanDirectory;
+
+  /**
+   * Exclusion list, only being used when scanDirectory is not null
+   * 
+   * @parameter expression="{exclusionList}"
+   * @optional
+   */
+  private String         exclusionList;
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public void execute() throws MojoExecutionException {
@@ -58,12 +74,10 @@ public class SAGFinderMojo extends AbstractMojo {
       return;
     }
     try {
-      Set<Artifact> artifacts = filterCompileAndRuntimeScope(project.getArtifacts());
-      artifacts = filterExcludeGroupIds(artifacts, excludeGroupIds);
-      artifacts = filterExcludeArtifactIds(artifacts, excludeArtifactIds);
-      for (Artifact a : artifacts) {
-        getLog().info("Scanning " + a);
-        if (isFlaggedByFinder(a)) { throw new MojoExecutionException("Artifact " + a + " was flagged by Finder"); }
+      if (scanDirectory != null) {
+        doScanDirectory();
+      } else {
+        doScanDependencies();
       }
       getLog().info("Scanning completed! Nothing flagged by Finder");
     } catch (Exception e) {
@@ -71,6 +85,23 @@ public class SAGFinderMojo extends AbstractMojo {
         throw (MojoExecutionException) e;
       } else {
         throw new MojoExecutionException("Error", e);
+      }
+    }
+  }
+
+  private void doScanDirectory() throws Exception {
+    if (isFlaggedByFinder(scanDirectory)) { throw new MojoExecutionException("Finder found Oracle jar(s)"); }
+  }
+
+  private void doScanDependencies() throws Exception {
+    Set<Artifact> artifacts = filterCompileAndRuntimeScope(project.getArtifacts());
+    artifacts = filterExcludeGroupIds(artifacts);
+    artifacts = filterExcludeArtifactIds(artifacts);
+    for (Artifact a : artifacts) {
+      getLog().info("Scanning " + a);
+      if (isFlaggedByFinder(a.getFile().getAbsolutePath())) {
+        //
+        throw new MojoExecutionException("Artifact " + a + " was flagged by Finder");
       }
     }
   }
@@ -87,35 +118,42 @@ public class SAGFinderMojo extends AbstractMojo {
     return result;
   }
 
-  private static Set<Artifact> filterExcludeGroupIds(Set<Artifact> artifacts, String excludeGroupIds) {
-    if (excludeGroupIds == null || excludeGroupIds.length() == 0) return artifacts;
+  private Set<Artifact> filterExcludeGroupIds(Set<Artifact> artifacts) {
+    if (isEmpty(excludeGroupIds)) return artifacts;
     Set<Artifact> result = new HashSet<Artifact>();
     List<String> excludes = Arrays.asList(excludeGroupIds.split("\\s*,\\s*"));
     for (Artifact a : artifacts) {
       if (!excludes.contains(a.getGroupId())) {
         result.add(a);
+      } else {
+        getLog().info("Exclude " + a + " from scanning");
       }
     }
     return result;
   }
 
-  private static Set<Artifact> filterExcludeArtifactIds(Set<Artifact> artifacts, String excludeArtifactIds) {
-    if (excludeArtifactIds == null || excludeArtifactIds.length() == 0) return artifacts;
+  private Set<Artifact> filterExcludeArtifactIds(Set<Artifact> artifacts) {
+    if (isEmpty(excludeArtifactIds)) return artifacts;
     Set<Artifact> result = new HashSet<Artifact>();
     List<String> excludes = Arrays.asList(excludeArtifactIds.split("\\s*,\\s*"));
     for (Artifact a : artifacts) {
       if (!excludes.contains(a.getArtifactId())) {
         result.add(a);
+      } else {
+        getLog().info("Exclude " + a + " from scanning");
       }
     }
     return result;
   }
 
-  private boolean isFlaggedByFinder(Artifact a) throws Exception {
+  private boolean isFlaggedByFinder(String file) throws Exception {
     Finder finder = new Finder();
     finder.setPackageOnlySearch(true);
-    finder.setSearchRootDirectory(a.getFile().getAbsolutePath());
+    finder.setSearchRootDirectory(file);
     finder.setUniqueEnabled(true);
+    if (!isEmpty(exclusionList)) {
+      finder.setExcludesListFilename(exclusionList);
+    }
     List<String> resultList = finder.doSearch();
     if (resultList.size() > 0) {
       for (String result : resultList) {
@@ -125,5 +163,9 @@ public class SAGFinderMojo extends AbstractMojo {
     } else {
       return false;
     }
+  }
+
+  private static boolean isEmpty(String s) {
+    return s == null || s.length() == 0;
   }
 }
