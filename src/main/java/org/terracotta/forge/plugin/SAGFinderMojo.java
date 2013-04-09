@@ -34,19 +34,19 @@ public class SAGFinderMojo extends AbstractMojo {
   protected MavenProject project;
 
   /**
-   * @parameter expression="{excludeGroupIds}"
+   * @parameter expression="${excludeGroupIds}"
    * @optional
    */
   private String         excludeGroupIds;
 
   /**
-   * @parameter expression="{excludeArtifactIds}"
+   * @parameter expression="${excludeArtifactIds}"
    * @optional
    */
   private String         excludeArtifactIds;
 
   /**
-   * @parameter expression="{onlyRunWhenSagDepsIsTrue}" default-value="false"
+   * @parameter expression="${onlyRunWhenSagDepsIsTrue}" default-value="false"
    * @optional
    */
   private boolean        onlyRunWhenSagDepsIsTrue;
@@ -54,7 +54,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Directory that would be scanned by Finder. If this is specify then dependencies of the project won't be scanned
    * 
-   * @parameter expression="{scanDirectory}"
+   * @parameter expression="${scanDirectory}"
    * @optional
    */
   private String         scanDirectory;
@@ -62,7 +62,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Exclusion list, only being used when scanDirectory is not null
    * 
-   * @parameter expression="{exclusionList}"
+   * @parameter expression="${exclusionList}"
    * @optional
    */
   private String         exclusionList;
@@ -74,7 +74,8 @@ public class SAGFinderMojo extends AbstractMojo {
       return;
     }
     try {
-      if (scanDirectory != null) {
+      getLog().info("scanDirecotry " + scanDirectory);
+      if (!isEmpty(scanDirectory)) {
         doScanDirectory();
       } else {
         doScanDependencies();
@@ -90,10 +91,12 @@ public class SAGFinderMojo extends AbstractMojo {
   }
 
   private void doScanDirectory() throws Exception {
+    getLog().info("About to scan " + scanDirectory + " with Finder");
     if (isFlaggedByFinder(scanDirectory)) { throw new MojoExecutionException("Finder found Oracle jar(s)"); }
   }
 
   private void doScanDependencies() throws Exception {
+    getLog().info("About to scan dependencies with Finder");
     Set<Artifact> artifacts = filterCompileAndRuntimeScope(project.getArtifacts());
     artifacts = filterExcludeGroupIds(artifacts);
     artifacts = filterExcludeArtifactIds(artifacts);
