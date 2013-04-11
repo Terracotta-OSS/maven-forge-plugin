@@ -79,6 +79,7 @@ public class SAGFinderMojo extends AbstractMojo {
   public void execute() throws MojoExecutionException {
     if (skip) {
       getLog().info("skip is set to true. Skipping");
+      return;
     }
     if (onlyRunWhenSagDepsIsTrue && !Boolean.getBoolean("sag-deps")) {
       getLog().info("Skipped condition found: onlyRunWhenSagDepsIsTrue = true and sag-deps = false");
