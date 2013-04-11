@@ -48,7 +48,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Allow skipping this mojo altogether
    * 
-   * @parameter expression="${skip}" default-value="false"
+   * @parameter expression="${skipSagFinder}" default-value="false"
    * @optional
    */
   private boolean        skip;
