@@ -46,6 +46,14 @@ public class SAGFinderMojo extends AbstractMojo {
   private String         excludeArtifactIds;
 
   /**
+   * Allow skipping this mojo altogether
+   * 
+   * @parameter default-value="false"
+   * @optional
+   */
+  private boolean        skip;
+
+  /**
    * @parameter expression="${onlyRunWhenSagDepsIsTrue}" default-value="false"
    * @optional
    */
@@ -69,6 +77,9 @@ public class SAGFinderMojo extends AbstractMojo {
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public void execute() throws MojoExecutionException {
+    if (skip) {
+      getLog().info("skip is set to true. Skipping");
+    }
     if (onlyRunWhenSagDepsIsTrue && !Boolean.getBoolean("sag-deps")) {
       getLog().info("Skipped condition found: onlyRunWhenSagDepsIsTrue = true and sag-deps = false");
       return;
