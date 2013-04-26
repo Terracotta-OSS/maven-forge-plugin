@@ -158,6 +158,9 @@
       <url>http://nexus:8080/content/repositories/terracotta-snapshots</url>
     </snapshotRepository>
   </distributionManagement>
-
+  <scm>
+    <connection>scm:git:git@github.com:Terracotta-OSS/maven-forge-plugin.git</connection>
+    <developerConnection>scm:git:https://github.com/Terracotta-OSS/maven-forge-plugin.git</developerConnection>
+  </scm>
 
 </project>
