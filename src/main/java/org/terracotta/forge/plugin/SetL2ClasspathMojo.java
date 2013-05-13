@@ -6,21 +6,22 @@ package org.terracotta.forge.plugin;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectBuilder;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Set;
-import java.util.jar.JarInputStream;
-import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -32,6 +33,11 @@ import java.util.zip.ZipFile;
  * @requiresDependencyResolution test
  */
 public class SetL2ClasspathMojo extends AbstractMojo {
+
+  /** @component */
+  private MavenProjectBuilder mavenProjectBuilder;
+  /** @component */
+  private ArtifactMetadataSource artifactMetadataSource;
   /**
    * project instance. Injected automatically by Maven
    * 
@@ -81,7 +87,7 @@ public class SetL2ClasspathMojo extends AbstractMojo {
     File terracottaJarFile = getTerracottaJar();
     if (terracottaJarFile == null) { throw new MojoExecutionException("Couldn't find Terracotta core artifact"); }
     try {
-      String l2Classppath = getTerracottaClassPath(terracottaJarFile);
+      String l2Classppath = getTerracottaClassPath();
       if (Boolean.valueOf(project.getProperties().getProperty("devmode"))) {
         l2Classppath = generateDevModeClasspath(terracottaJarFile) + l2Classppath;
       }
@@ -98,66 +104,50 @@ public class SetL2ClasspathMojo extends AbstractMojo {
 
     for (Artifact a : artifacts) {
       if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals("terracotta-ee"))
-          && a.getGroupId().equals("org.terracotta")) { return a.getFile(); }
+              && a.getGroupId().equals("org.terracotta")) { return a.getFile(); }
     }
     return null;
   }
 
-  /**
-   * assume coordinate in the form groupId:artifactId:version:type
-   * 
-   * @param artifactCoordinate
-   * @return
-   * @throws IOException
-   */
-  private File getArtifactFile(String artifactCoordinate) throws Exception {
-    String[] coords = artifactCoordinate.split(":");
-    if (coords.length != 4) { throw new RuntimeException(
-                                                         "Coordinate doesn't match template [groupId:artifactId:version:type]: "
-                                                             + artifactCoordinate); }
-    String groupId = coords[0];
-    String artifactId = coords[1];
-    String version = coords[2];
-    String type = coords[3];
+  private String getTerracottaClassPath() throws Exception{
+    @SuppressWarnings("unchecked")
+    Set<Artifact> artifacts = project.getDependencyArtifacts();
 
-    Artifact artifact = artifactFactory.createArtifact(groupId, artifactId, version, "test", type);
-    getLog().debug("XXX resolving L2 classpath element " + artifactCoordinate);
-    artifactResolver.resolveAlways(artifact, remoteRepositories, localRepository);
+    for (Artifact a : artifacts) {
+      if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals("terracotta-ee"))
+              && a.getGroupId().equals("org.terracotta")) {
 
-    File artifactFile = new File(localRepository.getBasedir(), groupId.replace('.', '/') + "/" + artifactId + "/"
-                                                               + version + "/" + artifactId + "-" + version + "."
-                                                               + type);
+        StringBuilder sb = new StringBuilder();
+        MavenProject pomProject = mavenProjectBuilder.buildFromRepository(a, remoteRepositories, localRepository);
+        Set terracottaDirectDependencies = pomProject.createArtifacts(artifactFactory, null, null);
+        ArtifactFilter testAndWarFilter = new ArtifactFilter() {
+          public boolean include(Artifact artifact) {
+            if(artifact.getScope().equals("test") || (artifact.getType().equals("war")) ) {
+              return false;
+            }
+            return true;
+          }
+        };
+        ArtifactResolutionResult arr = artifactResolver.resolveTransitively(terracottaDirectDependencies, a, pomProject.getManagedVersionMap(), localRepository, remoteRepositories, artifactMetadataSource, testAndWarFilter);
 
-    if (!artifactFile.exists()) throw new RuntimeException("Failed to resolve artifact: " + artifactCoordinate);
-
-    return artifactFile.getCanonicalFile();
-  }
-
-  private String getTerracottaClassPath(File terracottaJar) throws Exception {
-    Manifest manifest = null;
-    FileInputStream in = null;
-    try {
-      in = new FileInputStream(terracottaJar);
-      JarInputStream jarStream = new JarInputStream(in);
-      manifest = jarStream.getManifest();
-      jarStream.close();
-      String mavenClassPath = manifest.getMainAttributes().getValue("Maven-Class-Path");
-      if (mavenClassPath == null) { throw new Exception("Coudln't find Maven-Class-Path in manifest of "
-                                                        + terracottaJar); }
-      StringBuilder sb = new StringBuilder();
-      sb.append(terracottaJar);
-
-      String[] classpathElements = mavenClassPath.split(" ");
-      for (String element : classpathElements) {
-        File path = getArtifactFile(element);
-        if (path != null) {
-          sb.append(File.pathSeparator).append(path.getAbsolutePath());
+        Set<Artifact> terracottaDirectAndTransitiveDependencies = arr.getArtifacts();
+        terracottaDirectAndTransitiveDependencies.add(a);
+        int size = terracottaDirectAndTransitiveDependencies.size();
+        int currentPosition = 0;
+        for (Artifact artifact : terracottaDirectAndTransitiveDependencies) {
+          File file = artifact.getFile();
+          sb.append(file.getCanonicalPath());
+          if (currentPosition < size - 1) {
+            sb.append(":");
+          }
+          currentPosition++;
         }
+        getLog().debug("l2 classpath in use : " + sb.toString());
+        return sb.toString();
       }
-      return sb.toString();
-    } finally {
-      IOUtils.closeQuietly(in);
     }
+    getLog().error("No org.terracotta:terracotta(-ee) could be found among this project dependencies; hence no terracotta classpath will be generated!");
+    return "";
   }
 
   private String generateDevModeClasspath(File terracottaJarFile) throws IOException {
