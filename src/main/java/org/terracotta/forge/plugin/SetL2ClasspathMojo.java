@@ -138,7 +138,7 @@ public class SetL2ClasspathMojo extends AbstractMojo {
           File file = artifact.getFile();
           sb.append(file.getCanonicalPath());
           if (currentPosition < size - 1) {
-            sb.append(":");
+            sb.append(File.pathSeparator);
           }
           currentPosition++;
         }
