@@ -3,7 +3,6 @@
  */
 package org.terracotta.forge.plugin;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
@@ -16,14 +15,9 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 /**
  * Set L2 (terracotta-xxx.jar or terracotta-ee-xxx.jar) classpath to Maven properties
@@ -88,9 +82,6 @@ public class SetL2ClasspathMojo extends AbstractMojo {
     if (terracottaJarFile == null) { throw new MojoExecutionException("Couldn't find Terracotta core artifact"); }
     try {
       String l2Classppath = getTerracottaClassPath();
-      if (Boolean.valueOf(project.getProperties().getProperty("devmode"))) {
-        l2Classppath = generateDevModeClasspath(terracottaJarFile) + l2Classppath;
-      }
       getLog().debug("Setting tc.tests.info.l2.classpath to: " + l2Classppath);
       project.getProperties().put("tc.tests.info.l2.classpath", l2Classppath);
     } catch (Exception e) {
@@ -142,43 +133,10 @@ public class SetL2ClasspathMojo extends AbstractMojo {
           }
           currentPosition++;
         }
-        getLog().debug("l2 classpath in use : " + sb.toString());
         return sb.toString();
       }
     }
     getLog().error("No org.terracotta:terracotta(-ee) could be found among this project dependencies; hence no terracotta classpath will be generated!");
     return "";
-  }
-
-  private String generateDevModeClasspath(File terracottaJarFile) throws IOException {
-    ZipFile zip = new ZipFile(terracottaJarFile);
-    ZipEntry devmodeClassDir = zip.getEntry("devmode-classdir.txt");
-    if (devmodeClassDir == null) {
-      getLog().warn("devmode is on but couldn't find devmode-classdir.txt inside terracotta jar" + terracottaJarFile);
-      zip.close();
-      return "";
-    }
-    StringBuilder sb = new StringBuilder();
-    BufferedReader reader = null;
-    try {
-      reader = new BufferedReader(new InputStreamReader(zip.getInputStream(devmodeClassDir)));
-      String line = null;
-      while ((line = reader.readLine()) != null) {
-        line = line.trim();
-        if (line.length() == 0) continue;
-        for (String part : line.split(File.pathSeparator)) {
-          String path = part.trim();
-          if (path.length() == 0) continue;
-          File file = new File(path);
-          sb.append(file.getCanonicalPath()).append(File.pathSeparator);
-        }
-      }
-      return sb.toString();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    } finally {
-      zip.close();
-      IOUtils.closeQuietly(reader);
-    }
   }
 }
