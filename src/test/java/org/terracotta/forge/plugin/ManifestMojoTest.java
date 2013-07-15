@@ -13,15 +13,18 @@ import java.util.jar.Manifest;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  *
  * @author hhuynh
  */
+@Ignore
 public class ManifestMojoTest extends AbstractMojoTestCase {
 
   @Test
+  @Ignore
   public void testBuildInfo() throws Exception {
     File manifestFile = new File("target/test/MANIFEST");
     Map<String, String> manifestEntries = new HashMap<String, String>();

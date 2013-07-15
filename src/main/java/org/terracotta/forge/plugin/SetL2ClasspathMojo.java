@@ -3,76 +3,67 @@
  */
 package org.terracotta.forge.plugin;
 
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
-import org.apache.maven.artifact.resolver.ArtifactResolver;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
+import org.apache.maven.model.Repository;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.plugins.annotations.*;
+import org.apache.maven.project.*;
+import org.apache.maven.repository.RepositorySystem;
+import org.sonatype.aether.RepositorySystemSession;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+//import org.apache.maven.artifact.resolver.ArtifactResolver;
+
 /**
  * Set L2 (terracotta-xxx.jar or terracotta-ee-xxx.jar) classpath to Maven properties
- * 
- * @author hhuynh
- * @goal setl2classpath
- * @requiresDependencyResolution test
  */
+@Mojo( name = "setl2classpath", requiresDependencyResolution = ResolutionScope.TEST )
 public class SetL2ClasspathMojo extends AbstractMojo {
 
-  /** @component */
+
+  @Component
   private MavenProjectBuilder mavenProjectBuilder;
-  /** @component */
-  private ArtifactMetadataSource artifactMetadataSource;
-  /**
-   * project instance. Injected automatically by Maven
-   * 
-   * @parameter expression="${project}"
-   * @required
-   * @readonly
-   */
-  protected MavenProject     project;
+
+  @Component
+  private MavenProject project;
 
   /**
    * ArtifactRepository of the localRepository. To obtain the directory of localRepository in unit tests use
    * System.getProperty("localRepository").
-   * 
-   * @parameter expression="${localRepository}"
-   * @required
-   * @readonly
+   *
    */
+
+  @Parameter( required = true, readonly = true, defaultValue = "${localRepository}" )
   private ArtifactRepository localRepository;
 
   /**
-   * Creates the artifact.
-   * 
-   * @component
-   */
-  private ArtifactFactory    artifactFactory;
-
-  /**
    * The remote plugin repositories declared in the POM.
-   * 
-   * @parameter expression="${project.remoteArtifactRepositories}"
-   * @since 2.2
    */
-  @SuppressWarnings("rawtypes")
-  private List               remoteRepositories;
+  @Parameter( defaultValue = "${project.remoteArtifactRepositories}" )
+  private List<Repository>               remoteRepositories;
+
 
   /**
-   * Resolves the artifacts needed.
-   * 
-   * @component
+   * The current repository/network configuration of Maven.
+   *
    */
-  private ArtifactResolver   artifactResolver;
+  @Parameter( readonly = true, defaultValue = "${repositorySystemSession}" )
+  private RepositorySystemSession repoSession;
+
+  @Component
+  protected ProjectDependenciesResolver projectDependenciesResolver;
+
+  @Component
+  private RepositorySystem repositorySystem;
+
 
   /**
    * 
@@ -110,28 +101,45 @@ public class SetL2ClasspathMojo extends AbstractMojo {
 
         StringBuilder sb = new StringBuilder();
         MavenProject pomProject = mavenProjectBuilder.buildFromRepository(a, remoteRepositories, localRepository);
-        Set terracottaDirectDependencies = pomProject.createArtifacts(artifactFactory, null, null);
-        ArtifactFilter testAndWarFilter = new ArtifactFilter() {
-          public boolean include(Artifact artifact) {
-            if(artifact.getScope().equals("test") || (artifact.getType().equals("war")) ) {
-              return false;
-            }
-            return true;
-          }
-        };
-        ArtifactResolutionResult arr = artifactResolver.resolveTransitively(terracottaDirectDependencies, a, pomProject.getManagedVersionMap(), localRepository, remoteRepositories, artifactMetadataSource, testAndWarFilter);
+//        Set terracottaDirectDependencies = pomProject.createArtifacts(artifactFactory, null, null);
+//        ArtifactFilter testAndWarFilter = new ArtifactFilter() {
+//          public boolean include(Artifact artifact) {
+//            if(artifact.getScope().equals("test") || (artifact.getType().equals("war")) ) {
+//              return false;
+//            }
+//            return true;
+//          }
+//        };
 
-        Set<Artifact> terracottaDirectAndTransitiveDependencies = arr.getArtifacts();
+
+        DefaultDependencyResolutionRequest dependencyResolutionRequest = new DefaultDependencyResolutionRequest(pomProject, repoSession);
+//        dependencyResolutionRequest.setResolutionFilter(dependencyFilter);
+        DependencyResolutionResult dependencyResolutionResult;
+
+        dependencyResolutionResult = projectDependenciesResolver.resolve(dependencyResolutionRequest);
+
+        Set<Artifact> terracottaDirectAndTransitiveDependencies = new LinkedHashSet<Artifact>();
+        if (dependencyResolutionResult.getDependencyGraph() != null
+                && !dependencyResolutionResult.getDependencyGraph().getChildren().isEmpty()) {
+          RepositoryUtils.toArtifacts(terracottaDirectAndTransitiveDependencies, dependencyResolutionResult.getDependencyGraph().getChildren(),
+                  Collections.singletonList(pomProject.getArtifact().getId()), null);
+        }
+//
+//        ArtifactResolutionResult arr = artifact.resolveTransitively(terracottaDirectDependencies, a, pomProject.getManagedVersionMap(), localRepository, remoteRepositories, artifactMetadataSource, testAndWarFilter);
+//        ArtifactResolutionResult arr = null;
+//        Set<Artifact> terracottaDirectAndTransitiveDependencies = arr.getArtifacts();
         terracottaDirectAndTransitiveDependencies.add(a);
         int size = terracottaDirectAndTransitiveDependencies.size();
         int currentPosition = 0;
         for (Artifact artifact : terracottaDirectAndTransitiveDependencies) {
-          File file = artifact.getFile();
-          sb.append(file.getCanonicalPath());
-          if (currentPosition < size - 1) {
-            sb.append(File.pathSeparator);
+          if(!artifact.getScope().equals("test") && !(artifact.getType().equals("war")) ) {
+            File file = artifact.getFile();
+            sb.append(file.getCanonicalPath());
+            if (currentPosition < size - 1) {
+              sb.append(File.pathSeparator);
+            }
+            currentPosition++;
           }
-          currentPosition++;
         }
         return sb.toString();
       }

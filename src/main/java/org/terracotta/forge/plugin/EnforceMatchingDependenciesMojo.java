@@ -8,7 +8,7 @@ import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
-import org.apache.maven.artifact.resolver.ArtifactResolver;
+//import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -70,7 +70,7 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
    * @required
    * @readonly
    */
-  protected ArtifactResolver       artifactResolver;
+//  protected ArtifactResolver       artifactResolver;
 
   /**
    * List of Remote Repositories used by the resolver
@@ -134,7 +134,7 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
       Artifact enforceArtifact = this.artifactFactory.createArtifact(enforceGroupId, enforceArtifactId, enforceVersion,
                                                                      "", enforceType);
 
-      artifactResolver.resolve(enforceArtifact, this.remoteRepositories, this.localRepository);
+//      artifactResolver.resolve(enforceArtifact, this.remoteRepositories, this.localRepository);
 
       Artifact pomArtifact = this.artifactFactory.createArtifact(enforceGroupId, enforceArtifactId, enforceVersion, "",
                                                                  "pom");
@@ -147,10 +147,12 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
       Set dependencyArtifacts = MavenMetadataSource.createArtifacts(artifactFactory, dependencies, null, null, null);
       dependencyArtifacts.add(projectForPom.getArtifact());
 
-      ArtifactResolutionResult result = artifactResolver.resolveTransitively(dependencyArtifacts, pomArtifact,
-                                                                             Collections.EMPTY_MAP, localRepository,
-                                                                             remoteRepositories, metadataSource, null,
-                                                                             Collections.EMPTY_LIST);
+//      ArtifactResolutionResult result = artifactResolver.resolveTransitively(dependencyArtifacts, pomArtifact,
+//                                                                             Collections.EMPTY_MAP, localRepository,
+//                                                                             remoteRepositories, metadataSource, null,
+//                                                                             Collections.EMPTY_LIST);
+
+      ArtifactResolutionResult result = null;
 
       Set<Artifact> enforceArtifacts = filterCompileAndRuntimeScope(result.getArtifacts());
       getLog().debug("enforce artifacts before exclusions: " + enforceArtifacts);
