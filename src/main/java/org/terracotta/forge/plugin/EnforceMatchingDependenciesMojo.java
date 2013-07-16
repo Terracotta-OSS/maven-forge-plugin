@@ -3,171 +3,118 @@
  */
 package org.terracotta.forge.plugin;
 
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
-//import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectBuilder;
-import org.apache.maven.project.artifact.MavenMetadataSource;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.*;
+import org.sonatype.aether.RepositorySystem;
+import org.sonatype.aether.RepositorySystemSession;
+import org.sonatype.aether.util.artifact.DefaultArtifact;
+import org.sonatype.aether.graph.Dependency;
+import org.sonatype.aether.repository.RemoteRepository;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
- * Given a zip file, this goals will create a content.txt that lists zip entries
- * 
+ *
+ * This mojo will compare the project's dependencies with the enforcedArtifact dependencies.
+ * If the current project dependencies set does not contain all the enforcedArtifact deps, it will fail.
+ *
  * @author hhuynh
- * @goal enforceDependencies
- * @requiresDependencyResolution compile
  */
+@Mojo( name = "enforceDependencies", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME )
 public class EnforceMatchingDependenciesMojo extends AbstractMojo {
 
   /**
    * project instance. Injected automtically by Maven
-   * 
-   * @parameter expression="${project}"
-   * @required
-   * @readonly
    */
-  protected MavenProject           project;
-
-  /**
-   * @component
-   * @required
-   * @readonly
-   */
-  protected MavenProjectBuilder    projectBuilder;
-
-  /**
-   * @component
-   * @required
-   * @readonly
-   */
-  protected ArtifactMetadataSource metadataSource;
-
-  /**
-   * Used to look up Artifacts in the remote repository.
-   * 
-   * @parameter expression= "${component.org.apache.maven.artifact.factory.ArtifactFactory}"
-   * @required
-   * @readonly
-   */
-  protected ArtifactFactory        artifactFactory;
-
-  /**
-   * Used to look up Artifacts in the remote repository.
-   * 
-   * @parameter expression= "${component.org.apache.maven.artifact.resolver.ArtifactResolver}"
-   * @required
-   * @readonly
-   */
-//  protected ArtifactResolver       artifactResolver;
+  @Parameter(required = true, property = "project", readonly = true)
+  private MavenProject           project;
 
   /**
    * List of Remote Repositories used by the resolver
-   * 
-   * @parameter expression="${project.remoteArtifactRepositories}"
-   * @readonly
-   * @required
    */
-  protected List                   remoteRepositories;
+  @Parameter( defaultValue = "${project.remoteArtifactRepositories}" )
+  private List<RemoteRepository>                   remoteRepositories;
 
   /**
    * Location of the local repository.
-   * 
-   * @parameter expression="${localRepository}"
-   * @readonly
-   * @required
    */
-  protected ArtifactRepository     localRepository;
+  @Parameter(required = true, property = "localRepository", readonly = true)
+  private ArtifactRepository     localRepository;
 
   /**
    * The target pom's artifactId
-   * 
-   * @parameter expression="${enforceArtifactId}"
-   * @required
    */
+  @Parameter(required = true, property = "enforceArtifactId")
   private String                   enforceArtifactId;
 
   /**
    * The target pom's groupId
-   * 
-   * @parameter expression="${enforceGroupId}"
-   * @required
    */
+  @Parameter(required = true, property = "enforceGroupId")
   private String                   enforceGroupId;
 
   /**
    * The target pom's type
-   * 
-   * @parameter expression="${enforceType}" default-value="jar"
-   * @optional
    */
-  private String                   enforceType;
+  @Parameter(required = false, property = "enforceType", defaultValue = "jar")
+  private String enforceType;
 
   /**
    * The target pom's version
-   * 
-   * @parameter expression="${enforceVersion}"
-   * @required
    */
+  @Parameter(required = true, property = "enforceVersion")
   private String                   enforceVersion;
 
-  /**
-   * @parameter expression="{excludeGroupIds}"
-   * @optional
-   */
+  @Parameter(required = false, property = "excludeGroupIds")
   private String                   excludeGroupIds;
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
+
+  @Component
+  private RepositorySystem repositorySystem;
+
+  @Component
+  private ProjectDependenciesResolver projectDependenciesResolver;
+
+
+  @Component
+  private MavenProjectBuilder mavenProjectBuilder;
+
+  @Parameter( readonly = true, defaultValue = "${repositorySystemSession}" )
+  private RepositorySystemSession repoSession;
+
   public void execute() throws MojoExecutionException {
     try {
-      Artifact enforceArtifact = this.artifactFactory.createArtifact(enforceGroupId, enforceArtifactId, enforceVersion,
-                                                                     "", enforceType);
 
-//      artifactResolver.resolve(enforceArtifact, this.remoteRepositories, this.localRepository);
+      String coords = getEnforcedArtifactCoordinates();
+      DefaultArtifact enforceArtifact = new DefaultArtifact(coords);
+      MavenProject enforcePom = mavenProjectBuilder.buildFromRepository( RepositoryUtils.toArtifact(enforceArtifact), remoteRepositories, localRepository);
+      DefaultDependencyResolutionRequest enforceResolutionRequest = new DefaultDependencyResolutionRequest(enforcePom, repoSession);
+      DependencyResolutionResult enforceResolutionResult = projectDependenciesResolver.resolve(enforceResolutionRequest);
 
-      Artifact pomArtifact = this.artifactFactory.createArtifact(enforceGroupId, enforceArtifactId, enforceVersion, "",
-                                                                 "pom");
-
-      MavenProject projectForPom = null;
-      projectForPom = projectBuilder.buildFromRepository(pomArtifact, remoteRepositories, localRepository);
-
-      List dependencies = projectForPom.getDependencies();
-
-      Set dependencyArtifacts = MavenMetadataSource.createArtifacts(artifactFactory, dependencies, null, null, null);
-      dependencyArtifacts.add(projectForPom.getArtifact());
-
-//      ArtifactResolutionResult result = artifactResolver.resolveTransitively(dependencyArtifacts, pomArtifact,
-//                                                                             Collections.EMPTY_MAP, localRepository,
-//                                                                             remoteRepositories, metadataSource, null,
-//                                                                             Collections.EMPTY_LIST);
-
-      ArtifactResolutionResult result = null;
-
-      Set<Artifact> enforceArtifacts = filterCompileAndRuntimeScope(result.getArtifacts());
+      Set<Artifact> enforceArtifacts = filterCompileAndRuntimeScope(enforceResolutionResult.getDependencies());
       getLog().debug("enforce artifacts before exclusions: " + enforceArtifacts);
       if (excludeGroupIds != null) {
         enforceArtifacts = filterExcludeGroupIds(enforceArtifacts, excludeGroupIds);
         getLog().debug("enforce artifacts after exclusions: " + enforceArtifacts);
       }
 
-      Set<Artifact> thisProjectartifacts = filterCompileAndRuntimeScope(project.getArtifacts());
-      getLog().debug("current artifacts: " + thisProjectartifacts);
+      Set<Artifact> artifacts = project.getArtifacts();
+      Set<Artifact> thisProjectArtifacts = filterCompileAndRuntimeScope(artifacts);
+      getLog().debug("current artifacts: " + thisProjectArtifacts);
 
       // enforce artifacts should be a subset of this project's artifacts
-      if (!thisProjectartifacts.containsAll(enforceArtifacts)) {
-        Set<Artifact> missingArtifacts = new HashSet(enforceArtifacts);
-        missingArtifacts.removeAll(thisProjectartifacts);
+      if (!thisProjectArtifacts.containsAll(enforceArtifacts)) {
+        Set<Artifact> missingArtifacts = new HashSet<Artifact>(enforceArtifacts);
+        missingArtifacts.removeAll(thisProjectArtifacts);
         String message = "This pom is missing some dependencies of the enforcing artifact " + enforceArtifact + "\n";
         message += "Missing " + missingArtifacts;
         throw new MojoFailureException(message);
@@ -179,6 +126,15 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
     }
   }
 
+  private String getEnforcedArtifactCoordinates() {
+    String coords = enforceGroupId + ":" + enforceArtifactId ;
+    if(enforceType!= null && !"".equals(enforceType)) {
+      coords+=":" + enforceType;
+    }
+    coords+= ":" + enforceVersion;
+    return coords;
+  }
+
   private static Set<Artifact> filterCompileAndRuntimeScope(Set<Artifact> artifacts) {
     Set<Artifact> result = new HashSet<Artifact>();
     for (Artifact a : artifacts) {
@@ -187,6 +143,16 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
           result.add(a);
         }
       }
+    }
+    return result;
+  }
+
+  private static Set<Artifact> filterCompileAndRuntimeScope(Collection<Dependency> dependencies) {
+    Set<Artifact> result = new HashSet<Artifact>();
+    for (Dependency dependency : dependencies) {
+        if (Artifact.SCOPE_COMPILE.equals(dependency.getScope()) || Artifact.SCOPE_RUNTIME.equals(dependency.getScope())) {
+          result.add(RepositoryUtils.toArtifact(dependency.getArtifact()));
+        }
     }
     return result;
   }

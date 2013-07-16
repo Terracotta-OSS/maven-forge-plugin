@@ -28,20 +28,20 @@ public class GenerateZipEntriesMojo extends AbstractMojo {
   /**
    * project instance. Injected automtically by Maven
    * 
-   * @parameter expression="${project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */
   protected MavenProject      project;  
 
   /**
-   * @parameter expression="${zipFile}"
+   * @parameter property="zipFile"
    * @required
    */
   private File   zipFile;
 
   /**
-   * @parameter expression="${entriesFilename}" default-value="toolkit-content.txt"
+   * @parameter property="entriesFilename" default-value="toolkit-content.txt"
    * @optional
    */
   private String entriesFilename;

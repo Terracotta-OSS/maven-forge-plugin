@@ -40,14 +40,14 @@ import java.util.jar.Manifest;
 public class ManifestMojo extends AbstractMojo {
 
   /**
-   * @parameter expression="${manifest.file}" default-value="${project.build.directory}/MANIFEST.MF"
+   * @parameter property="manifest.file" default-value="${project.build.directory}/MANIFEST.MF"
    */
   private File                      manifestFile;
 
   /**
-   * project instance. Injected automtically by Maven
+   * project instance. Injected automatically by Maven
    * 
-   * @parameter expression="${project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */
@@ -56,22 +56,22 @@ public class ManifestMojo extends AbstractMojo {
   /**
    * Extra manifest entries
    * 
-   * @parameter express="${manifestEntries}"
+   * @parameter property="manifestEntries"
    */
   private final Map<String, String> manifestEntries = new HashMap<String, String>();
 
   /**
-   * @parameter expression="${rootPath}
+   * @parameter property="rootPath"
    */
   private String                    rootPath;
 
   /**
-   * @parameter expression="${addClasspath}" default-value="false"
+   * @parameter property="addClasspath" default-value="false"
    */
   private boolean                   addClasspath;
 
   /**
-   * @parameter expression="${excludeGroupIds}" default-value=""
+   * @parameter property="excludeGroupIds" default-value=""
    */
   private String                    excludeGroupIds;
 

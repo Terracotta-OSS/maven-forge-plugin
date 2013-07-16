@@ -25,22 +25,22 @@ import java.util.Set;
 public class SAGFinderMojo extends AbstractMojo {
 
   /**
-   * project instance. Injected automtically by Maven
+   * project instance. Injected automatically by Maven
    * 
-   * @parameter expression="${project}"
+   * @parameter property="project}"
    * @required
    * @readonly
    */
   protected MavenProject project;
 
   /**
-   * @parameter expression="${excludeGroupIds}"
+   * @parameter property="excludeGroupIds"
    * @optional
    */
   private String         excludeGroupIds;
 
   /**
-   * @parameter expression="${excludeArtifactIds}"
+   * @parameter property="excludeArtifactIds"
    * @optional
    */
   private String         excludeArtifactIds;
@@ -48,13 +48,13 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Allow skipping this mojo altogether
    * 
-   * @parameter expression="${skipSagFinder}" default-value="false"
+   * @parameter property="skipSagFinder" default-value="false"
    * @optional
    */
   private boolean        skip;
 
   /**
-   * @parameter expression="${onlyRunWhenSagDepsIsTrue}" default-value="false"
+   * @parameter property="onlyRunWhenSagDepsIsTrue" default-value="false"
    * @optional
    */
   private boolean        onlyRunWhenSagDepsIsTrue;
@@ -62,7 +62,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Directory that would be scanned by Finder. If this is specify then dependencies of the project won't be scanned
    * 
-   * @parameter expression="${scanDirectory}"
+   * @parameter property="scanDirectory"
    * @optional
    */
   private String         scanDirectory;
@@ -70,7 +70,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Exclusion list, only being used when scanDirectory is not null
    * 
-   * @parameter expression="${exclusionList}"
+   * @parameter property="exclusionList"
    * @optional
    */
   private String         exclusionList;

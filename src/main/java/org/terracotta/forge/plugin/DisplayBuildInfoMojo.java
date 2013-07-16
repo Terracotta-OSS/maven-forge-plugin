@@ -32,7 +32,7 @@ public class DisplayBuildInfoMojo extends AbstractMojo {
   /**
    * project instance. Injected automatically by Maven
    *
-   * @parameter expression="${project}"
+   * @parameter property="${project}"
    * @required
    * @readonly
    */
@@ -41,7 +41,7 @@ public class DisplayBuildInfoMojo extends AbstractMojo {
   /**
    * comma separated list of groupIds
    *
-   * @parameter expression="${includes}" default-value="net.sf.ehcache, org.terracotta, org.quartz-scheduler"
+   * @parameter property="includes" default-value="net.sf.ehcache, org.terracotta, org.quartz-scheduler"
    */
   private String includes;
 

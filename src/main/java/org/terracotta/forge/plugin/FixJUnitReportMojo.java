@@ -23,7 +23,7 @@ public class FixJUnitReportMojo extends AbstractMojo {
   /**
    * project instance. Injected automatically by Maven
    * 
-   * @parameter expression="${project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */

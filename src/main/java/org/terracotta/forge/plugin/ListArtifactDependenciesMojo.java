@@ -25,7 +25,7 @@ public class ListArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
    * output file
    * 
    * @optional
-   * @parameter expression="${outputFile}"
+   * @parameter property="outputFile"
    */
   private File                    outputFile;
 
@@ -33,7 +33,7 @@ public class ListArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
    * append listing to existing outputFile, default is false
    * 
    * @optional
-   * @parameter expression="${appendFile}" default-value="false"
+   * @parameter property="appendFile" default-value="false"
    */
   private boolean                 appendFile;
 
@@ -41,7 +41,7 @@ public class ListArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
    * print the dependencies as file URL, default is true
    * 
    * @optional
-   * @parameter expression="${listAsUrl}" default-value="true"
+   * @parameter property="listAsUrl" default-value="true"
    */
   private boolean                 listAsUrl;
 
@@ -49,7 +49,7 @@ public class ListArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
    * comment added as a line beginging of the output
    * 
    * @optional
-   * @parameter expression="${comment}" default-value=""
+   * @parameter property="comment" default-value=""
    */
   private String                  comment;
 

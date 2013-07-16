@@ -23,14 +23,14 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
    * output dir
    * 
    * @required
-   * @parameter expression="${outputDir}"
+   * @parameter property="outputDir"
    */
   private File                    outputDir;
 
   /**
    * remove version from artifact filename
    * 
-   * @parameter expression="${removeVersion}" default-value="false"
+   * @parameter property="removeVersion" default-value="false"
    */
   private boolean removeVersion;
 

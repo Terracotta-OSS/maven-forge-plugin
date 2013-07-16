@@ -35,32 +35,32 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
   /**
    * project instance. Injected automtically by Maven
    * 
-   * @parameter expression="${project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */
   protected MavenProject       project;
 
   /**
-   * @parameter expression="${packagingDir}"
+   * @parameter property="packagingDir"
    * @required
    */
   private File                 packagingDir;
 
   /**
-   * @parameter expression="${privateClassSuffix}"
+   * @parameter property="privateClassSuffix"
    * @optional
    */
   private String               privateClassSuffix;
 
   /**
-   * @parameter expression="${toolkitContentFilename}" default-value="toolkit-content.txt"
+   * @parameter property="toolkitContentFilename" default-value="toolkit-content.txt"
    * @optional
    */
   private String               toolkitContentFilename;
 
   /**
-   * @parameter expresssion=${skip} default-value="false"
+   * @parameter property="skip" default-value="false"
    * @optional
    */
   private boolean              skip;

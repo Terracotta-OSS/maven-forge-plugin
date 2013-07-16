@@ -34,14 +34,14 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
   /**
    * project instance. Injected automatically by Maven
    * 
-   * @parameter expression="${project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */
   protected MavenProject            project;
 
   /**
-   * @parameter default-value="${repositorySystemSession}"
+   * @parameter default-value="repositorySystemSession"
    * @readonly
    */
   protected RepositorySystemSession session;
@@ -62,7 +62,7 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
   /**
    * artifact groupId:artifactId:version
    * 
-   * @parameter expression="${artifact}"
+   * @parameter property="artifact"
    * @required
    */
   protected List<String>            artifacts;
@@ -71,7 +71,7 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    * comma separated list of groupIds to be excluded
    * 
    * @optional
-   * @parameter expression="${excludeGroupIds}"
+   * @parameter property="excludeGroupIds"
    */
   protected String                  excludeGroupIds;
 
@@ -79,14 +79,14 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    * comma separated list of artifactIds to be excluded
    * 
    * @optional
-   * @parameter expression="${excludeArtifactIds}"
+   * @parameter property="excludeArtifactIds"
    */
   protected String                  excludeArtifactIds;
 
   /**
    * resolve dependencies transitively or not, default is true
    * 
-   * @parameter expression="${resolveTransitively}" default-value="true"
+   * @parameter property="resolveTransitively" default-value="true"
    */
   protected boolean                 resolveTransitively;
 
@@ -96,7 +96,7 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    * However, you won't be able to get output listed as file
    * </p>
    * 
-   * @parameter expression="${doNotResolve}" default-value="false"
+   * @parameter property="doNotResolve" default-value="false"
    */
   protected boolean                 doNotResolve;
 

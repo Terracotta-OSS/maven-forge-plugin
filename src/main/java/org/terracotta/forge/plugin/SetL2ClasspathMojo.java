@@ -11,7 +11,6 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.*;
-import org.apache.maven.repository.RepositorySystem;
 import org.sonatype.aether.RepositorySystemSession;
 
 import java.io.File;
@@ -60,10 +59,6 @@ public class SetL2ClasspathMojo extends AbstractMojo {
 
   @Component
   protected ProjectDependenciesResolver projectDependenciesResolver;
-
-  @Component
-  private RepositorySystem repositorySystem;
-
 
   /**
    * 

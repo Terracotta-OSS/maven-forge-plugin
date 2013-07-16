@@ -33,35 +33,35 @@ public class BuildInfoMojo extends AbstractMojo {
   /**
    * project instance. Injected automatically by Maven
    * 
-   * @parameter expression="${project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */
   protected MavenProject      project;
 
   /**
-   * @parameter expression="${rootPath}
+   * @parameter property="rootPath"
    */
   private String              rootPath;
 
   /**
-   * @parameter expression="${eeRootPath}
+   * @parameter property="eeRootPath"
    */
   private String              eeRootPath;
 
   /**
-   * @parameter expression="${osRootPath}
+   * @parameter property="osRootPath"
    */
   private String              osRootPath;
 
   /**
-   * @parameter expression="{generateBuildInfoFile}" default-value="false"
+   * @parameter property="generateBuildInfoFile" default-value="false"
    * @opional
    */
   private boolean             generateBuildInfoFile;
 
   /**
-   * @parameter expression="{buildInfoLocation}" default-value="${project.build.outputDirectory}"
+   * @parameter property="buildInfoLocation" default-value="${project.build.outputDirectory}"
    * @optional
    */
   private String              buildInfoLocation;
