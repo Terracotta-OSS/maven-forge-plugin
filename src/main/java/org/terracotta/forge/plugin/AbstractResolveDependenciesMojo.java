@@ -4,6 +4,7 @@
 package org.terracotta.forge.plugin;
 
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.sonatype.aether.RepositorySystem;
 import org.sonatype.aether.RepositorySystemSession;
@@ -41,7 +42,7 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
   protected MavenProject            project;
 
   /**
-   * @parameter default-value="repositorySystemSession"
+   * @parameter defaultValue = "${repositorySystemSession}"
    * @readonly
    */
   protected RepositorySystemSession session;
