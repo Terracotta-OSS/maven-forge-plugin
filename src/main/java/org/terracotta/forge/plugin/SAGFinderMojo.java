@@ -27,7 +27,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * project instance. Injected automatically by Maven
    * 
-   * @parameter property="project}"
+   * @parameter property="project"
    * @required
    * @readonly
    */
