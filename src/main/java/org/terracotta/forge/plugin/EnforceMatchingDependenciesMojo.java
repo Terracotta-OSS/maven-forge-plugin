@@ -3,9 +3,11 @@
  */
 package org.terracotta.forge.plugin;
 
-import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.filter.CumulativeScopeArtifactFilter;
+import org.apache.maven.model.Repository;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -13,14 +15,17 @@ import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.maven.project.*;
-import org.sonatype.aether.RepositorySystem;
-import org.sonatype.aether.RepositorySystemSession;
-import org.sonatype.aether.util.artifact.DefaultArtifact;
-import org.sonatype.aether.graph.Dependency;
-import org.sonatype.aether.repository.RemoteRepository;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectDependenciesResolver;
+import org.apache.maven.repository.RepositorySystem;
+import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
+import org.apache.maven.shared.dependency.graph.DependencyNode;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -33,7 +38,7 @@ import java.util.*;
 public class EnforceMatchingDependenciesMojo extends AbstractMojo {
 
   /**
-   * project instance. Injected automtically by Maven
+   * project instance. Injected automatically by Maven
    */
   @Parameter(required = true, property = "project", readonly = true)
   private MavenProject           project;
@@ -42,7 +47,7 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
    * List of Remote Repositories used by the resolver
    */
   @Parameter( defaultValue = "${project.remoteArtifactRepositories}" )
-  private List<RemoteRepository>                   remoteRepositories;
+  private List<Repository>                   remoteRepositories;
 
   /**
    * Location of the local repository.
@@ -84,24 +89,33 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
   @Component
   private ProjectDependenciesResolver projectDependenciesResolver;
 
-
   @Component
   private MavenProjectBuilder mavenProjectBuilder;
 
-  @Parameter( readonly = true, defaultValue = "${repositorySystemSession}" )
-  private RepositorySystemSession repoSession;
+  @Component
+  private DependencyGraphBuilder dependencyGraphBuilder;
+
+  @Component
+  private ArtifactFactory defaultArtifactFactory;
 
   public void execute() throws MojoExecutionException {
     try {
+      Artifact enforceArtifact = defaultArtifactFactory.createArtifact(enforceGroupId,enforceArtifactId,enforceVersion,"",enforceType);
+      MavenProject enforcePom = mavenProjectBuilder.buildFromRepository( enforceArtifact, remoteRepositories, localRepository);
+      DependencyNode rootNode = dependencyGraphBuilder.buildDependencyGraph(enforcePom, new CumulativeScopeArtifactFilter(Arrays.asList(Artifact.SCOPE_COMPILE, Artifact.SCOPE_RUNTIME)));
 
-      String coords = getEnforcedArtifactCoordinates();
-      DefaultArtifact enforceArtifact = new DefaultArtifact(coords);
-      MavenProject enforcePom = mavenProjectBuilder.buildFromRepository( RepositoryUtils.toArtifact(enforceArtifact), remoteRepositories, localRepository);
-      DefaultDependencyResolutionRequest enforceResolutionRequest = new DefaultDependencyResolutionRequest(enforcePom, repoSession);
-      DependencyResolutionResult enforceResolutionResult = projectDependenciesResolver.resolve(enforceResolutionRequest);
+      Set<DependencyNode> nodes = new HashSet<DependencyNode>();
+      getAllNodes(rootNode, nodes);
+      nodes.remove(rootNode);
+      Set<Artifact> enforceArtifacts =  new HashSet<Artifact>();
+      for (DependencyNode node : nodes) {
+        Artifact artifact = node.getArtifact();
+        enforceArtifacts.add(defaultArtifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(),artifact.getScope(),artifact.getType()));
+      }
 
-      Set<Artifact> enforceArtifacts = filterCompileAndRuntimeScope(enforceResolutionResult.getDependencies());
+
       getLog().debug("enforce artifacts before exclusions: " + enforceArtifacts);
+      enforceArtifacts = filterCompileAndRuntimeScope(enforceArtifacts);
       if (excludeGroupIds != null) {
         enforceArtifacts = filterExcludeGroupIds(enforceArtifacts, excludeGroupIds);
         getLog().debug("enforce artifacts after exclusions: " + enforceArtifacts);
@@ -126,13 +140,11 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
     }
   }
 
-  private String getEnforcedArtifactCoordinates() {
-    String coords = enforceGroupId + ":" + enforceArtifactId ;
-    if(enforceType!= null && !"".equals(enforceType)) {
-      coords+=":" + enforceType;
+  private void getAllNodes(DependencyNode node,Set<DependencyNode> currentNodes) {
+    currentNodes.add(node);
+    for (DependencyNode currentNode : node.getChildren()) {
+      getAllNodes(currentNode, currentNodes);
     }
-    coords+= ":" + enforceVersion;
-    return coords;
   }
 
   private static Set<Artifact> filterCompileAndRuntimeScope(Set<Artifact> artifacts) {
@@ -143,16 +155,6 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
           result.add(a);
         }
       }
-    }
-    return result;
-  }
-
-  private static Set<Artifact> filterCompileAndRuntimeScope(Collection<Dependency> dependencies) {
-    Set<Artifact> result = new HashSet<Artifact>();
-    for (Dependency dependency : dependencies) {
-        if (Artifact.SCOPE_COMPILE.equals(dependency.getScope()) || Artifact.SCOPE_RUNTIME.equals(dependency.getScope())) {
-          result.add(RepositoryUtils.toArtifact(dependency.getArtifact()));
-        }
     }
     return result;
   }
