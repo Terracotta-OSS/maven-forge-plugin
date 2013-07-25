@@ -75,7 +75,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       // pre-scan groups
       if (groups != null) {
         File reflectionFile = new File(project.getBuild().getDirectory(), "reflections.xml");
-        if (reflectionFile.exists()) {
+        if (reflectionFile.exists() && this.getIncludes() == null) {
           List<String> includeList;
           try {
             includeList = getCategorizedTests(reflectionFile);
