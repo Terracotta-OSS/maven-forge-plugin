@@ -67,7 +67,6 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.sag</groupId>
@@ -99,6 +98,16 @@
       <artifactId>maven-dependency-tree</artifactId>
       <version>2.1</version>
     </dependency>
+     <dependency>
+       <groupId>org.reflections</groupId>
+       <artifactId>reflections</artifactId>
+       <version>0.9.9-RC1</version>
+     </dependency>    
+    <dependency>
+      <groupId>jaxen</groupId>
+      <artifactId>jaxen</artifactId>
+      <version>1.1.4</version>
+    </dependency>     
   </dependencies>
 
   <build>
@@ -189,7 +198,7 @@
   <profiles>
     <profile>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <activeByDefault>false</activeByDefault>
       </activation>
       <id>run-its</id>
       <build>

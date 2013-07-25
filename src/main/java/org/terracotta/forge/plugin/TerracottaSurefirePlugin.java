@@ -14,28 +14,33 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.surefire.booter.SurefireBooterForkException;
 import org.apache.maven.surefire.suite.RunResult;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.Node;
+import org.dom4j.io.SAXReader;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-@Mojo( name = "test", defaultPhase = LifecyclePhase.TEST, threadSafe = true,
-        requiresDependencyResolution = ResolutionScope.TEST )
+@Mojo(name = "test", defaultPhase = LifecyclePhase.TEST, threadSafe = true, requiresDependencyResolution = ResolutionScope.TEST)
 public class TerracottaSurefirePlugin extends SurefirePlugin {
 
-  @Parameter( property = "cleanJunitReports", defaultValue = "false" )
-  private boolean                              cleanJunitReports;
+  @Parameter(property = "cleanJunitReports", defaultValue = "false")
+  private boolean cleanJunitReports;
 
-  @Parameter( property = "listFile" )
-  private File                                 listFile;
+  @Parameter(property = "listFile")
+  private File    listFile;
 
-  @Parameter( property = "poundTimes" , defaultValue = "1")
-  private int                                  poundTimes;
+  @Parameter(property = "poundTimes", defaultValue = "1")
+  private int     poundTimes;
 
-  @Parameter( property = "devLog" , defaultValue = "false")
-  private boolean                              devLog;
+  @Parameter(property = "devLog", defaultValue = "false")
+  private boolean devLog;
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
@@ -48,8 +53,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       if (!devLog4jFile.exists()) {
         try {
           devLog4jFile.getParentFile().mkdirs();
-          if (!devLog4jFile.createNewFile())
-            throw new IOException("createNewFile return false");
+          if (!devLog4jFile.createNewFile()) throw new IOException("createNewFile return false");
         } catch (IOException e1) {
           getLog().error(e1);
           throw new MojoExecutionException("Failed to create " + devLog4jFile);
@@ -60,23 +64,40 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     try {
       // recheck should_skip_test maven propperty to decide if tests should be
       // skipped
-      String shouldSkipTestsValue = project.getProperties().getProperty(
-          "should_skip_tests");
+      String shouldSkipTestsValue = project.getProperties().getProperty("should_skip_tests");
       if (shouldSkipTestsValue != null) {
-        getLog().warn(
-            "'should_skip_tests' property found, value is "
-                + shouldSkipTestsValue
-                + ". This value overrides the 'skipTests' original setting.");
+        getLog().warn("'should_skip_tests' property found, value is " + shouldSkipTestsValue
+                          + ". This value overrides the 'skipTests' original setting.");
         boolean shouldSkipTests = Boolean.valueOf(shouldSkipTestsValue);
         this.setSkipTests(shouldSkipTests);
+      }
+
+      // pre-scan groups
+      if (groups != null) {
+        File reflectionFile = new File(project.getBuild().getDirectory(), "reflections.xml");
+        if (reflectionFile.exists()) {
+          List<String> includeList;
+          try {
+            includeList = getCategorizedTests(reflectionFile);
+            if (includeList.size() == 0) {
+              // add some fake classname here to trick surefire into NOT scanning
+              // all tests
+              includeList.add("**/FAKEFAKEFAKE.java");
+            } else {
+              getLog().info("Including these tests found in " + reflectionFile + " file");
+              getLog().info(includeList.toString());
+            }
+            this.setIncludes(includeList);
+          } catch (DocumentException e) {
+            throw new MojoExecutionException(e.getMessage());
+          }
+        }
       }
 
       // handle listFile
       if (listFile != null) {
         if (!listFile.exists()) {
-          getLog().warn(
-              "listFile '" + listFile
-                  + "' specified but does not exist. No tests will be run");
+          getLog().warn("listFile '" + listFile + "' specified but does not exist. No tests will be run");
           return;
         }
         getLog().info("Running tests found in file " + listFile);
@@ -149,9 +170,26 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   @Override
   protected boolean hasExecutedBefore() {
     // if we're pounding test, we have to lie so that the test can be run again
-    if (poundTimes > 1)
-      return false;
+    if (poundTimes > 1) return false;
     return super.hasExecutedBefore();
   }
 
+  private List<String> getCategorizedTests(File reflectionFile) throws DocumentException {
+    Document doc = new SAXReader().read(reflectionFile);
+    List<Node> list = doc.selectNodes("//Reflections/TypeAnnotationsScanner/entry");
+    List<String> result = new ArrayList<String>();
+    for (Node node : list) {
+      Element entry = (Element) node;
+      Element key = entry.element("key");
+      if (key.getText().equals("org.junit.experimental.categories.Category")) {
+        Element values = entry.element("values");
+        for (Iterator it = values.elements().iterator(); it.hasNext();) {
+          Element value = (Element) it.next();
+          String className = value.getText();
+          result.add("**/" + className.substring(className.lastIndexOf(".") + 1) + ".java");
+        }
+      }
+    }
+    return result;
+  }
 }
