@@ -181,13 +181,13 @@
     <repository>
       <id>terracotta-releases</id>
       <name>terracotta-releases</name>
-      <url>http://nexus:8080/content/repositories/terracotta-releases</url>
+      <url>http://nexus.terracotta.lan:8080/content/repositories/terracotta-releases</url>
     </repository>
     <snapshotRepository>
       <id>terracotta-snapshots</id>
       <name>terracotta-snapshots</name>
       <uniqueVersion>false</uniqueVersion>
-      <url>http://nexus:8080/content/repositories/terracotta-snapshots</url>
+      <url>http://nexus.terracotta.lan:8080/content/repositories/terracotta-snapshots</url>
     </snapshotRepository>
   </distributionManagement>
   <scm>
@@ -198,7 +198,7 @@
 
   <profiles>
     <profile>
-      <id>tc-publish</id>
+      <id>ittests</id>
       <build>
         <plugins>
           <plugin>
