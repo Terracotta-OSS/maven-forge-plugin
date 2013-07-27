@@ -4,6 +4,12 @@
  */
 package org.terracotta.forge.plugin.util;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.maven.plugin.logging.Log;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -18,12 +24,6 @@ import java.util.regex.Pattern;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.maven.plugin.logging.Log;
-import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * A tool to clean up junit report for elements that we're not interested in
@@ -95,9 +95,6 @@ public class JUnitReportCleaner extends DefaultHandler {
       try {
         writer = new PrintWriter(report);
         IOUtils.write(reportBuffer.toString(), writer);
-        if (failCount > 0) {
-          log.info("TEST " + className + " FAILED.");
-        }
       } catch (IOException e) {
         throw new RuntimeException(e);
       } finally {

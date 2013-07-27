@@ -30,7 +30,7 @@ import java.util.List;
 @Mojo(name = "test", defaultPhase = LifecyclePhase.TEST, threadSafe = true, requiresDependencyResolution = ResolutionScope.TEST)
 public class TerracottaSurefirePlugin extends SurefirePlugin {
 
-  @Parameter(property = "cleanJunitReports", defaultValue = "false")
+  @Parameter(property = "cleanJunitReports", defaultValue = "true")
   private boolean cleanJunitReports;
 
   @Parameter(property = "listFile")

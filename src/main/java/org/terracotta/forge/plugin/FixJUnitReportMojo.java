@@ -4,14 +4,14 @@
  */
 package org.terracotta.forge.plugin;
 
-import java.io.File;
-import java.io.FilenameFilter;
-
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.terracotta.forge.plugin.util.JUnitReportCleaner;
+
+import java.io.File;
+import java.io.FilenameFilter;
 
 /**
  * Fix zero-length junit reports
@@ -37,7 +37,7 @@ public class FixJUnitReportMojo extends AbstractMojo {
     File sureFireReportDir = new File(project.getBuild().getDirectory(),
         "surefire-reports");
     if (!sureFireReportDir.isDirectory()) {
-      getLog().warn("surefire-reports folder was not found");
+      getLog().debug("surefire-reports folder was not found");
     } else {
 
       JUnitReportCleaner cleaner = new JUnitReportCleaner(getLog());
