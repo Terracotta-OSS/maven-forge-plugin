@@ -3,21 +3,25 @@
  */
 package org.terracotta.forge.plugin;
 
-import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.filter.CumulativeScopeArtifactFilter;
 import org.apache.maven.model.Repository;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.*;
-import org.apache.maven.project.*;
-import org.sonatype.aether.RepositorySystemSession;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectDependenciesResolver;
+import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
+import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 //import org.apache.maven.artifact.resolver.ArtifactResolver;
 
@@ -49,16 +53,14 @@ public class SetL2ClasspathMojo extends AbstractMojo {
   @Parameter( defaultValue = "${project.remoteArtifactRepositories}" )
   private List<Repository>               remoteRepositories;
 
-
-  /**
-   * The current repository/network configuration of Maven.
-   *
-   */
-  @Parameter( readonly = true, defaultValue = "${repositorySystemSession}" )
-  private RepositorySystemSession repoSession;
-
   @Component
   protected ProjectDependenciesResolver projectDependenciesResolver;
+
+  @Component
+  private DependencyGraphBuilder dependencyGraphBuilder;
+
+  @Component
+  private ArtifactFactory defaultArtifactFactory;
 
   /**
    * 
@@ -96,33 +98,21 @@ public class SetL2ClasspathMojo extends AbstractMojo {
 
         StringBuilder sb = new StringBuilder();
         MavenProject pomProject = mavenProjectBuilder.buildFromRepository(a, remoteRepositories, localRepository);
-//        Set terracottaDirectDependencies = pomProject.createArtifacts(artifactFactory, null, null);
-//        ArtifactFilter testAndWarFilter = new ArtifactFilter() {
-//          public boolean include(Artifact artifact) {
-//            if(artifact.getScope().equals("test") || (artifact.getType().equals("war")) ) {
-//              return false;
-//            }
-//            return true;
-//          }
-//        };
 
-
-        DefaultDependencyResolutionRequest dependencyResolutionRequest = new DefaultDependencyResolutionRequest(pomProject, repoSession);
-//        dependencyResolutionRequest.setResolutionFilter(dependencyFilter);
-        DependencyResolutionResult dependencyResolutionResult;
-
-        dependencyResolutionResult = projectDependenciesResolver.resolve(dependencyResolutionRequest);
-
-        Set<Artifact> terracottaDirectAndTransitiveDependencies = new LinkedHashSet<Artifact>();
-        if (dependencyResolutionResult.getDependencyGraph() != null
-                && !dependencyResolutionResult.getDependencyGraph().getChildren().isEmpty()) {
-          RepositoryUtils.toArtifacts(terracottaDirectAndTransitiveDependencies, dependencyResolutionResult.getDependencyGraph().getChildren(),
-                  Collections.singletonList(pomProject.getArtifact().getId()), null);
+        // we start with the root node
+        DependencyNode rootNode = dependencyGraphBuilder.buildDependencyGraph(pomProject, new CumulativeScopeArtifactFilter(Arrays.asList(Artifact.SCOPE_COMPILE, Artifact.SCOPE_RUNTIME)));
+        Set<DependencyNode> nodes = new HashSet<DependencyNode>();
+        getAllNodes(rootNode, nodes);
+        nodes.remove(rootNode);
+        Set<Artifact> terracottaDirectAndTransitiveDependencies =  new TreeSet<Artifact>();
+        for (DependencyNode node : nodes) {
+          Artifact nodeArtifact = node.getArtifact();
+          Artifact completeArtifact = defaultArtifactFactory.createArtifact(nodeArtifact.getGroupId(), nodeArtifact.getArtifactId(), nodeArtifact.getVersion(), nodeArtifact.getScope(), nodeArtifact.getType());
+          completeArtifact.setFile(new File(localRepository.getBasedir(), localRepository.pathOf(completeArtifact)));
+          terracottaDirectAndTransitiveDependencies.add(completeArtifact);
         }
-//
-//        ArtifactResolutionResult arr = artifact.resolveTransitively(terracottaDirectDependencies, a, pomProject.getManagedVersionMap(), localRepository, remoteRepositories, artifactMetadataSource, testAndWarFilter);
-//        ArtifactResolutionResult arr = null;
-//        Set<Artifact> terracottaDirectAndTransitiveDependencies = arr.getArtifacts();
+        //we end up with the list of artifacts under the root node
+
         terracottaDirectAndTransitiveDependencies.add(a);
         int size = terracottaDirectAndTransitiveDependencies.size();
         int currentPosition = 0;
@@ -142,4 +132,12 @@ public class SetL2ClasspathMojo extends AbstractMojo {
     getLog().error("No org.terracotta:terracotta(-ee) could be found among this project dependencies; hence no terracotta classpath will be generated!");
     return "";
   }
+
+  private void getAllNodes(DependencyNode node,Set<DependencyNode> currentNodes) {
+    currentNodes.add(node);
+    for (DependencyNode currentNode : node.getChildren()) {
+      getAllNodes(currentNode, currentNodes);
+    }
+  }
+
 }
