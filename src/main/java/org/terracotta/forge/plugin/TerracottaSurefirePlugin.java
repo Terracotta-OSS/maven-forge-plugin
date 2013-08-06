@@ -73,24 +73,22 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       }
 
       // pre-scan groups
-      if (groups != null) {
-        File reflectionFile = new File(project.getBuild().getDirectory(), "reflections.xml");
-        if (reflectionFile.exists() && this.getIncludes() == null) {
-          List<String> includeList;
-          try {
-            includeList = getCategorizedTests(reflectionFile);
-            if (includeList.size() == 0) {
-              // add some fake classname here to trick surefire into NOT scanning
-              // all tests
-              includeList.add("**/FAKEFAKEFAKE.java");
-            } else {
-              getLog().info("Including these tests found in " + reflectionFile + " file");
-              getLog().info(includeList.toString());
-            }
-            this.setIncludes(includeList);
-          } catch (DocumentException e) {
-            throw new MojoExecutionException(e.getMessage());
+      File reflectionFile = new File(project.getBuild().getDirectory(), "reflections.xml");
+      if (reflectionFile.exists()) {
+        List<String> includeList;
+        try {
+          includeList = getCategorizedTests(reflectionFile);
+          if (includeList.size() == 0) {
+            // add some fake classname here to trick surefire into NOT scanning
+            // all tests
+            includeList.add("**/FAKEFAKEFAKE.java");
+          } else {
+            getLog().info("Including these tests found in " + reflectionFile + " file");
+            getLog().info(includeList.toString());
           }
+          this.setIncludes(includeList);
+        } catch (DocumentException e) {
+          throw new MojoExecutionException(e.getMessage());
         }
       }
 
