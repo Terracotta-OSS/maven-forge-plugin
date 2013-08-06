@@ -71,9 +71,10 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
       return;
     }
     if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
+    String buildDirectory = project.getBuild().getOutputDirectory() + File.separator;
     File entriesFile = new File(packagingDir, toolkitContentFilename);
     try {
-      StringBuilder internalJars = new StringBuilder();
+      StringBuilder internalResources = new StringBuilder();
 
       // exploding embedded jars
       Iterator it = FileUtils.iterateFiles(packagingDir, new String[] { "jar" }, true);
@@ -82,7 +83,6 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
         Matcher m = EMBEDDED_JARS_PATTERN.matcher(jar.getAbsolutePath());
         if (!m.matches()) continue;
         getLog().info("Exploding " + jar);
-        internalJars.append(m.group(1).replace('\\', '/')).append("\n");
         String name = jar.getName();
         File renamedJar = new File(jar.getParent(), name + ".tmp");
         ensureRename(jar, renamedJar);
@@ -97,12 +97,17 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
         for (String subDir : Arrays.asList("ehcache", "L1", "TIMs")) {
           File dir = new File(packagingDir, subDir);
           if (!dir.isDirectory()) continue;
-          it = FileUtils.iterateFiles(dir, new String[] { "class" }, true);
+          it = FileUtils.iterateFiles(dir, null, true);
           while (it.hasNext()) {
-            File classFile = (File) it.next();
-            File clazzFile = new File(classFile.getParentFile(), classFile.getName().replace(".class",
-                                                                                             privateClassSuffix));
-            classFile.renameTo(clazzFile);
+            File resource = (File) it.next();
+            if (resource.getName().endsWith(".class")) {
+              File clazzFile = new File(resource.getParentFile(), resource.getName()
+                  .replace(".class", privateClassSuffix));
+              resource.renameTo(clazzFile);
+              internalResources.append(cleanupSuffix(buildDirectory, clazzFile.getAbsolutePath())).append("\n");
+            } else {
+              internalResources.append(cleanupSuffix(buildDirectory, resource.getAbsolutePath())).append("\n");
+            }
           }
         }
       }
@@ -110,7 +115,7 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
       PrintWriter pw = null;
       try {
         pw = new PrintWriter(entriesFile);
-        pw.print(internalJars.toString());
+        pw.print(internalResources.toString());
         pw.close();
       } catch (IOException e) {
         throw new MojoExecutionException("IO error", e);
@@ -152,5 +157,10 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
     String pathRegex = "[\\\\/]";
     String notPathRegex = "[^\\\\/]";
     return ".*" + pathRegex + "?(((ehcache)|(L1)|(TIMs))" + pathRegex + notPathRegex + "+\\.jar)" + pathRegex + "?";
+  }
+
+  private static String cleanupSuffix(String suffix, String path) {
+    String cleaned = path.replace(suffix, "");
+    return cleaned.replace('\\', '/');
   }
 }
