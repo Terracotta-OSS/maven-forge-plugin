@@ -6,6 +6,9 @@ package org.terracotta.forge.plugin;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,23 +18,19 @@ import java.util.Collection;
  * print out dependencies of a given artifact
  * 
  * @author hhuynh
- * @goal copy-dependencies
- * @requiresDependencyResolution compile
  */
+@Mojo(name = "copy-dependencies", requiresDependencyResolution = ResolutionScope.COMPILE)
 public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMojo {
   /**
    * output dir
-   * 
-   * @required
-   * @parameter property="outputDir"
    */
-  private File                    outputDir;
+  @Parameter(required = true)
+  private File    outputDir;
 
   /**
    * remove version from artifact filename
-   * 
-   * @parameter property="removeVersion" default-value="false"
    */
+  @Parameter(required = false, defaultValue = "false")
   private boolean removeVersion;
 
   /**
