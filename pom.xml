@@ -16,18 +16,6 @@
 
   <dependencies>
     <dependency>
-      <!-- required in all cases -->
-      <groupId>org.sonatype.aether</groupId>
-      <artifactId>aether-api</artifactId>
-      <version>1.13.1</version>
-    </dependency>
-    <dependency>
-      <!-- might be superfluous depending on your use case -->
-      <groupId>org.sonatype.aether</groupId>
-      <artifactId>aether-util</artifactId>
-      <version>1.13.1</version>
-    </dependency>
-    <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-container-default</artifactId>
       <version>1.5.5</version>
