@@ -4,8 +4,8 @@
 package org.terracotta.forge.plugin;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.sonatype.aether.artifact.Artifact;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,10 +50,10 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
     for (Artifact a : deps) {
       String filename = a.getFile().getName();
       if (a.isSnapshot()) {
-        filename = a.getArtifactId() + "-" + a.getBaseVersion() + "." + a.getExtension();
+        filename = a.getArtifactId() + "-" + a.getBaseVersion() + "." + a.getType();
       }
       if (removeVersion) {
-        filename = a.getArtifactId() + "." + a.getExtension();
+        filename = a.getArtifactId() + "." + a.getType();
       }
       File destFile = new File(outputDir, filename);
       if (destFile.exists()) {

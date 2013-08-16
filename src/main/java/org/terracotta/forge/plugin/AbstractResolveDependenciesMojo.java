@@ -3,27 +3,30 @@
  */
 package org.terracotta.forge.plugin;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.factory.ArtifactFactory;
+import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.artifact.resolver.filter.CumulativeScopeArtifactFilter;
+import org.apache.maven.model.Repository;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.sonatype.aether.RepositorySystem;
-import org.sonatype.aether.RepositorySystemSession;
-import org.sonatype.aether.artifact.Artifact;
-import org.sonatype.aether.collection.CollectRequest;
-import org.sonatype.aether.graph.Dependency;
-import org.sonatype.aether.graph.DependencyFilter;
-import org.sonatype.aether.repository.RemoteRepository;
-import org.sonatype.aether.resolution.ArtifactResult;
-import org.sonatype.aether.resolution.DependencyRequest;
-import org.sonatype.aether.util.artifact.DefaultArtifact;
-import org.sonatype.aether.util.artifact.JavaScopes;
-import org.sonatype.aether.util.filter.DependencyFilterUtils;
+import org.apache.maven.project.MavenProjectBuilder;
+import org.apache.maven.project.ProjectDependenciesResolver;
+import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
+import org.apache.maven.shared.dependency.graph.DependencyNode;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * abstract class to resolve dependencies of a given artifact
@@ -31,84 +34,80 @@ import java.util.Set;
  * @author hhuynh
  */
 public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
-  /**
-   * project instance. Injected automatically by Maven
-   * 
-   * @parameter property="project"
-   * @required
-   * @readonly
-   */
-  protected MavenProject            project;
+  private static final Pattern          MAVEN_COORDS_REGX = Pattern
+                                                              .compile("([^: ]+):([^: ]+)(:([^: ]*)(:([^: ]+))?)?:([^: ]+)");
+
+  @Component
+  private MavenProjectBuilder           mavenProjectBuilder;
+
+  @Component
+  private MavenProject                  project;
 
   /**
-   * @parameter default-value="${repositorySystemSession}"
-   * @readonly
+   * ArtifactRepository of the localRepository. To obtain the directory of localRepository in unit tests use
+   * System.getProperty("localRepository").
    */
-  protected RepositorySystemSession session;
+
+  @Parameter(required = true, readonly = true, defaultValue = "${localRepository}")
+  private ArtifactRepository            localRepository;
 
   /**
-   * @component
+   * The remote plugin repositories declared in the POM.
    */
-  private RepositorySystem          system;
+  @Parameter(defaultValue = "${project.remoteArtifactRepositories}")
+  private List<Repository>              remoteRepositories;
 
-  /**
-   * The project's remote repositories to use for the resolution.
-   * 
-   * @parameter default-value="${project.remoteProjectRepositories}"
-   * @readonly
-   */
-  private List<RemoteRepository>    remoteRepos;
+  @Component
+  protected ProjectDependenciesResolver projectDependenciesResolver;
+
+  @Component
+  private DependencyGraphBuilder        dependencyGraphBuilder;
+
+  @Component
+  private ArtifactFactory               defaultArtifactFactory;
 
   /**
    * artifact groupId:artifactId:version
-   * 
-   * @parameter property="artifact"
-   * @required
    */
-  protected List<String>            artifacts;
+  @Parameter(required = true, readonly = true)
+  protected List<String>                artifacts;
 
   /**
    * comma separated list of groupIds to be excluded
-   * 
-   * @optional
-   * @parameter property="excludeGroupIds"
    */
-  protected String                  excludeGroupIds;
+  @Parameter(required = false)
+  protected String                      excludeGroupIds;
 
   /**
    * comma separated list of artifactIds to be excluded
-   * 
-   * @optional
-   * @parameter property="excludeArtifactIds"
    */
-  protected String                  excludeArtifactIds;
+  @Parameter(required = false)
+  protected String                      excludeArtifactIds;
 
   /**
    * resolve dependencies transitively or not, default is true
-   * 
-   * @parameter property="resolveTransitively" default-value="true"
    */
-  protected boolean                 resolveTransitively;
+  @Parameter(required = false, defaultValue = "true")
+  protected boolean                     resolveTransitively;
 
   /**
    * don't resolve, just output whatever configured, useful when we only want to append to output what we know
    * <p>
    * However, you won't be able to get output listed as file
    * </p>
-   * 
-   * @parameter property="doNotResolve" default-value="false"
    */
-  protected boolean                 doNotResolve;
+  @Parameter(required = false, defaultValue = "false")
+  protected boolean                     doNotResolve;
 
   protected Collection<Artifact> resolve() throws Exception {
     Collection<Artifact> deps = new ArrayList<Artifact>();
     if (doNotResolve) {
       for (String artifact : artifacts) {
-        deps.add(new DefaultArtifact(artifact));
+        deps.add(createArtifact(artifact));
       }
     } else {
       for (String artifact : artifacts) {
-        deps.addAll(resolveArtifact(new DefaultArtifact(artifact)));
+        deps.addAll(resolveArtifact(createArtifact(artifact)));
       }
     }
 
@@ -122,18 +121,41 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
     return deps;
   }
 
-  protected Collection<Artifact> resolveArtifact(Artifact artifact) throws Exception {
-    DependencyFilter classpathFlter = DependencyFilterUtils.classpathFilter(JavaScopes.RUNTIME);
-    CollectRequest collectRequest = new CollectRequest();
-    collectRequest.setRoot(new Dependency(artifact, JavaScopes.RUNTIME));
-    collectRequest.setRepositories(remoteRepos);
-    DependencyRequest dependencyRequest = new DependencyRequest(collectRequest, classpathFlter);
-    List<ArtifactResult> artifactResults = system.resolveDependencies(session, dependencyRequest).getArtifactResults();
-    Collection<Artifact> resolvedArtifacts = new ArrayList<Artifact>();
-    for (ArtifactResult artifactResult : artifactResults) {
-      resolvedArtifacts.add(artifactResult.getArtifact());
+  private void getAllNodes(DependencyNode node, Set<DependencyNode> currentNodes) {
+    currentNodes.add(node);
+    for (DependencyNode currentNode : node.getChildren()) {
+      getAllNodes(currentNode, currentNodes);
     }
+  }
+
+  protected Collection<Artifact> resolveArtifact(Artifact artifact) throws Exception {
+    Collection<Artifact> resolvedArtifacts = new ArrayList<Artifact>();
+    resolvedArtifacts.add(completeArtifact(artifact));
+    MavenProject pomProject = mavenProjectBuilder.buildFromRepository(artifact, remoteRepositories, localRepository);
+
+    // we start with the root node
+    DependencyNode rootNode = dependencyGraphBuilder.buildDependencyGraph(pomProject,
+                                                                          new CumulativeScopeArtifactFilter(Arrays
+                                                                              .asList(Artifact.SCOPE_COMPILE,
+                                                                                      Artifact.SCOPE_RUNTIME)));
+    Set<DependencyNode> nodes = new HashSet<DependencyNode>();
+    getAllNodes(rootNode, nodes);
+    nodes.remove(rootNode);
+    for (DependencyNode node : nodes) {
+      Artifact nodeArtifact = node.getArtifact();
+      Artifact completeArtifact = completeArtifact(nodeArtifact);
+      resolvedArtifacts.add(completeArtifact);
+    }
+
     return resolvedArtifacts;
+  }
+
+  private Artifact completeArtifact(Artifact artifact) {
+    Artifact completeArtifact = defaultArtifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(),
+                                                                      artifact.getBaseVersion(), artifact.getScope(),
+                                                                      artifact.getType());
+    completeArtifact.setFile(new File(localRepository.getBasedir(), localRepository.pathOf(completeArtifact)));
+    return completeArtifact;
   }
 
   private void excludeGroupIds(Collection<Artifact> deps) {
@@ -168,8 +190,8 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
    */
   private Collection<Artifact> getConfiguredArtifacts() {
     Collection<Artifact> ret = new ArrayList<Artifact>();
-    for (String a : artifacts) {
-      ret.add(new DefaultArtifact(a));
+    for (String coords : artifacts) {
+      ret.add(createArtifact(coords));
     }
     return ret;
   }
@@ -177,8 +199,7 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
   private boolean isConfiguredArtifact(Artifact a, Collection<Artifact> configuredArtifacts) {
     for (Artifact itArtifact : configuredArtifacts) {
       if (a.getGroupId().equals(itArtifact.getGroupId()) && a.getArtifactId().equals(itArtifact.getArtifactId())
-          && a.getBaseVersion().equals(itArtifact.getBaseVersion())
-          && a.getExtension().equals(itArtifact.getExtension()) && a.getClassifier().equals(itArtifact.getClassifier())) { return true; }
+          && a.getBaseVersion().equals(itArtifact.getBaseVersion()) && a.getType().equals(itArtifact.getType())) { return true; }
     }
     return false;
   }
@@ -190,6 +211,26 @@ public abstract class AbstractResolveDependenciesMojo extends AbstractMojo {
         it.remove();
       }
     }
+  }
+
+  private Artifact createArtifact(String coords) {
+    Matcher m = MAVEN_COORDS_REGX.matcher(coords);
+    if (!(m.matches())) { throw new IllegalArgumentException(
+                                                             "Bad artifact coordinates "
+                                                                 + coords
+                                                                 + ", expected format is <groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>"); }
+
+    String groupId = m.group(1);
+    String artifactId = m.group(2);
+    String extension = get(m.group(4), "jar");
+    String classifier = get(m.group(6), "");
+    String version = m.group(7);
+    // ( String groupId, String artifactId, String version, String type, String classifier )
+    return defaultArtifactFactory.createArtifactWithClassifier(groupId, artifactId, version, extension, classifier);
+  }
+
+  private static String get(String value, String defaultValue) {
+    return (((value == null) || (value.length() <= 0)) ? defaultValue : value);
   }
 
 }

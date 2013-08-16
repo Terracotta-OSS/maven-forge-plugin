@@ -4,8 +4,11 @@
 package org.terracotta.forge.plugin;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.sonatype.aether.artifact.Artifact;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,40 +20,35 @@ import java.util.Collection;
  * print out dependencies of a given artifact
  * 
  * @author hhuynh
- * @goal list-dependencies
- * @requiresDependencyResolution compile
  */
+@Mojo(name = "list-dependencies", requiresDependencyResolution = ResolutionScope.COMPILE)
 public class ListArtifactDependenciesMojo extends AbstractResolveDependenciesMojo {
   /**
    * output file
    * 
-   * @optional
-   * @parameter property="outputFile"
    */
+  @Parameter(required = false)
   private File                    outputFile;
 
   /**
    * append listing to existing outputFile, default is false
    * 
-   * @optional
-   * @parameter property="appendFile" default-value="false"
    */
+  @Parameter(required = false, defaultValue = "false")
   private boolean                 appendFile;
 
   /**
    * print the dependencies as file URL, default is true
    * 
-   * @optional
-   * @parameter property="listAsUrl" default-value="true"
    */
+  @Parameter(required = false, defaultValue = "true")
   private boolean                 listAsUrl;
 
   /**
    * comment added as a line beginging of the output
    * 
-   * @optional
-   * @parameter property="comment" default-value=""
    */
+  @Parameter(required = false, defaultValue = "")
   private String                  comment;
 
   /**
@@ -85,7 +83,7 @@ public class ListArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
       if (listAsUrl) {
         out.println(a.getFile().toURI().toURL().toString());
       } else {
-        out.println(a.getGroupId() + ":" + a.getArtifactId() + ":" + a.getExtension() + ":" + a.getBaseVersion()
+        out.println(a.getGroupId() + ":" + a.getArtifactId() + ":" + a.getType() + ":" + a.getBaseVersion()
                     + ":runtime");
       }
     }
