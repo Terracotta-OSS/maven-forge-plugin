@@ -44,6 +44,13 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
+    String tcTestTimeoutInSecs = project.getProperties().getProperty("tc.tests.info.junit-test-timeout-inseconds");
+    if (tcTestTimeoutInSecs != null && tcTestTimeoutInSecs.length() != 0) {
+      getLog().info("Overwriting test timeout using tc.tests.info.junit-test-timeout-inseconds: " + tcTestTimeoutInSecs
+                        + " seconds");
+      this.setForkedProcessTimeoutInSeconds(Integer.valueOf(tcTestTimeoutInSecs));
+    }
+
     if (devLog) {
       File currentDir = super.getWorkingDirectory();
       if (currentDir == null) {
