@@ -42,6 +42,9 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   @Parameter(property = "devLog", defaultValue = "false")
   private boolean devLog;
 
+  @Parameter(property = "useReflectionFile", defaultValue = "false")
+  private boolean useReflectionFile;
+
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
     String tcTestTimeoutInSecs = project.getProperties().getProperty("tc.tests.info.junit-test-timeout-inseconds");
@@ -81,7 +84,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
 
       // pre-scan groups
       File reflectionFile = new File(project.getBuild().getDirectory(), "reflections.xml");
-      if (reflectionFile.exists()) {
+      if (useReflectionFile && reflectionFile.exists()) {
         List<String> includeList;
         try {
           includeList = getCategorizedTests(reflectionFile);
