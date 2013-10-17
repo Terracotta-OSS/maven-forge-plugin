@@ -21,7 +21,11 @@ import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 import java.io.File;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 //import org.apache.maven.artifact.resolver.ArtifactResolver;
 
@@ -117,7 +121,7 @@ public class SetL2ClasspathMojo extends AbstractMojo {
         int size = terracottaDirectAndTransitiveDependencies.size();
         int currentPosition = 0;
         for (Artifact artifact : terracottaDirectAndTransitiveDependencies) {
-          if(!artifact.getScope().equals("test") && !(artifact.getType().equals("war")) ) {
+          if (!artifact.getScope().equals("test")) {
             File file = artifact.getFile();
             sb.append(file.getCanonicalPath());
             if (currentPosition < size - 1) {
