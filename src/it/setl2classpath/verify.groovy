@@ -53,10 +53,11 @@ def logString =  new StringBuilder().append("Setting tc.tests.info.l2.classpath 
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("slf4j").append(SLASH).append("slf4j-log4j12").append(SLASH).append("1.6.6").append(SLASH).append("slf4j-log4j12-1.6.6.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("jmxremote_optional-tc").append(SLASH).append("1.0.4").append(SLASH).append("jmxremote_optional-tc-1.0.4.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("management-core").append(SLASH).append("1.1.4").append(SLASH).append("management-core-1.1.4.jar").append(COLUMN).append(
+        localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("management-tsa-war").append(SLASH).append("4.0.2").append(SLASH).append("management-tsa-war-4.0.2.war").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("tc-l1-reconnect-properties").append(SLASH).append("4.1.1").append(SLASH).append("tc-l1-reconnect-properties-4.1.1.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("tcconfig").append(SLASH).append("4.1.1").append(SLASH).append("tcconfig-4.1.1.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("tcstats").append(SLASH).append("4.1.1").append(SLASH).append("tcstats-4.1.1.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("terracotta").append(SLASH).append("4.0.2").append(SLASH).append("terracotta-4.0.2.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("license").append(SLASH).append("terracotta-license").append(SLASH).append("1.0.10").append(SLASH).append("terracotta-license-1.0.10.jar").append(COLUMN)
-
+println logString
 assert 1 == buildLog.getText().count(logString)
