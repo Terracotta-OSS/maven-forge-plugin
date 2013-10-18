@@ -59,5 +59,4 @@ def logString =  new StringBuilder().append("Setting tc.tests.info.l2.classpath 
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("tcstats").append(SLASH).append("4.1.1").append(SLASH).append("tcstats-4.1.1.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("terracotta").append(SLASH).append("4.0.2").append(SLASH).append("terracotta-4.0.2.jar").append(COLUMN).append(
         localRepositoryPath).append(SLASH).append("org").append(SLASH).append("terracotta").append(SLASH).append("license").append(SLASH).append("terracotta-license").append(SLASH).append("1.0.10").append(SLASH).append("terracotta-license-1.0.10.jar").append(COLUMN)
-println logString
 assert 1 == buildLog.getText().count(logString)
