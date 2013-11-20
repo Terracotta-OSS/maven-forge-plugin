@@ -52,9 +52,6 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   @Parameter(property = "poundEmail", required = false)
   private String  poundEmail;
 
-  @Parameter(property = "poundEmailHost", required = false, defaultValue = "hqcas.eur.ad.sag")
-  private String  poundEmailHost;
-
   @Parameter(property = "devLog", defaultValue = "false")
   private boolean devLog;
 
