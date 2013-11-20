@@ -22,10 +22,20 @@ import org.dom4j.io.SAXReader;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
+
+import javax.mail.Authenticator;
+import javax.mail.Message;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 @Mojo(name = "test", defaultPhase = LifecyclePhase.TEST, threadSafe = true, requiresDependencyResolution = ResolutionScope.TEST)
 public class TerracottaSurefirePlugin extends SurefirePlugin {
@@ -38,6 +48,12 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
 
   @Parameter(property = "poundTimes", defaultValue = "1")
   private int     poundTimes;
+
+  @Parameter(property = "poundEmail", required = false)
+  private String  poundEmail;
+
+  @Parameter(property = "poundEmailHost", required = false, defaultValue = "hqcas.eur.ad.sag")
+  private String  poundEmailHost;
 
   @Parameter(property = "devLog", defaultValue = "false")
   private boolean devLog;
@@ -55,8 +71,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     }
 
     if (absoluteTimeoutSecs != this.getForkedProcessTimeoutInSeconds()) {
-      getLog().info("Overwriting test timeout using absolute-test-timeout-secs: " + absoluteTimeoutSecs
-                        + " seconds");
+      getLog().info("Overwriting test timeout using absolute-test-timeout-secs: " + absoluteTimeoutSecs + " seconds");
       this.setForkedProcessTimeoutInSeconds(absoluteTimeoutSecs);
     }
 
@@ -148,14 +163,25 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
             getLog().info("* POUNDING ITERATION: " + i);
             try {
               super.execute();
-            } catch (MojoExecutionException e) {
+            } catch (Exception e) {
               getLog().error("Test failed after iteration #" + i);
-              throw e;
+              poundAlertIfNeeded("Pounding finished: " + this.getTest() + " failed", "Test " + this.getTest()
+                                                                                     + " failed after iteration #" + i);
+              if (e instanceof MojoExecutionException) {
+                throw (MojoExecutionException) e;
+              } else if (e instanceof MojoFailureException) {
+                throw (MojoFailureException) e;
+              } else {
+                throw new MojoExecutionException("Failed", e);
+              }
             }
           }
         }
         // done pounding, exit
         getLog().info("*** Pounded " + poundTimes + " times! Test passed.");
+        poundAlertIfNeeded("Pounding finished: " + this.getTest() + " passed", "Pounded " + poundTimes
+                                                                               + " times! Test " + this.getTest()
+                                                                               + " passed");
       } else {
         // invoke surefire plugin normally
         super.execute();
@@ -179,6 +205,53 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
         fixUnitReportMojo.execute();
       }
     }
+  }
+
+  private void poundAlertIfNeeded(String subject, String text) throws MojoExecutionException {
+    if (poundEmail == null) return;
+    try {
+      Properties sendmailProps = new Properties();
+      File mailProps = new File(System.getProperty("user.home"), ".tc/poundmail.properties");
+      if (!mailProps.exists()) {
+        sendmailProps = getDefaultSendMailProps();
+        sendmailProps.list(System.out);
+        getLog().info(mailProps.getCanonicalPath()
+                          + " doesn't exist. Using default SAG smtp, you'll need to be in VPN to be able to send mail");
+      } else {
+        sendmailProps.load(new FileReader(mailProps));
+      }
+
+      final String username = sendmailProps.getProperty("username");
+      final String password = sendmailProps.getProperty("password");
+
+      Authenticator auth = null;
+      if (username != null && password != null) {
+        auth = new javax.mail.Authenticator() {
+          @Override
+          protected PasswordAuthentication getPasswordAuthentication() {
+            return new PasswordAuthentication(username, password);
+          }
+        };
+      }
+      Session mailSession = Session.getInstance(sendmailProps, auth);
+      Message message = new MimeMessage(mailSession);
+      message.setFrom(new InternetAddress("pounder@terracottatech.com"));
+      message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(poundEmail));
+      message.setSubject(subject);
+      message.setText(text);
+      Transport.send(message);
+      getLog().info("Sent result email to " + poundEmail);
+
+    } catch (Exception e) {
+      throw new MojoExecutionException("Error emailing", e);
+    }
+  }
+
+  private static Properties getDefaultSendMailProps() {
+    Properties props = new Properties();
+    props.setProperty("mail.smtp.host", "hqcas.eur.ad.sag");
+    props.setProperty("mail.smtp.port", "25");
+    return props;
   }
 
   @Override
