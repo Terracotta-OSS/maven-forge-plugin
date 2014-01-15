@@ -49,8 +49,7 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
     for (Artifact a : deps) {
       String filename = a.getFile().getName();
       if (a.isSnapshot()) {
-        filename = a.getArtifactId() + "-" + a.getBaseVersion()
-                   + (a.getClassifier() != null ? ("-" + a.getClassifier()) : "") + "." + a.getType();
+        filename = a.getArtifactId() + "-" + a.getBaseVersion() + "." + a.getType();
       }
       if (removeVersion) {
         filename = a.getArtifactId() + "." + a.getType();
