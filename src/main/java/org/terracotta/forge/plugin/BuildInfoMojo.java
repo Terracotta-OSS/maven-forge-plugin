@@ -198,7 +198,15 @@ public class BuildInfoMojo extends AbstractMojo {
   }
 
   private static void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
-    if (!osBranch.equals(eeBranch)) { throw new MojoExecutionException("branch doesn't match between EE (" + eeBranch
+    // For Ehcache branches, they don't really match 100%
+    // Ehcache EE branch: ehcache-core-ee-2.8.x
+    // Ehcache OS branch: ehcache-2.8.x
+    // so we remove -core-ee before matching
+
+    String os = osBranch.replace("-core-ee", "");
+    String ee = eeBranch.replace("-core-ee", "");
+
+    if (!os.equals(ee)) { throw new MojoExecutionException("branch doesn't match between EE (" + eeBranch
                                                                        + ") and OS (" + osBranch
                                                                        + "). Check your svn:externals property"); }
   }
