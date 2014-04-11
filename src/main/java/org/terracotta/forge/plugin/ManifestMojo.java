@@ -10,13 +10,11 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.terracotta.forge.plugin.util.Util;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
@@ -25,6 +23,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Attributes.Name;
@@ -179,8 +178,6 @@ public class ManifestMojo extends AbstractMojo {
   private void addBuildAttributes(Attributes attributes) throws MojoExecutionException {
     final String UNKNOWN = "unknown";
     final String BUILDINFO = "BuildInfo-";
-    final String urlKey = "URL: ";
-    final String revisionKey = "Last Changed Rev: ";
     String host = UNKNOWN;
     String svnUrl = UNKNOWN;
     String revision = UNKNOWN;
@@ -204,18 +201,9 @@ public class ManifestMojo extends AbstractMojo {
 
     try {
       getLog().debug("root path " + rootPath);
-      String svnInfo = Util.getSvnInfo(new File(rootPath).getCanonicalPath());
-      getLog().debug("svn info " + svnInfo);
-      BufferedReader br = new BufferedReader(new StringReader(svnInfo));
-      String line = null;
-      while ((line = br.readLine()) != null) {
-        if (line.startsWith(urlKey)) {
-          svnUrl = line.substring(urlKey.length());
-        }
-        if (line.startsWith(revisionKey)) {
-          revision = line.substring(revisionKey.length());
-        }
-      }
+      Properties svnInfo = Util.getSvnInfo(new File(rootPath).getCanonicalPath(), getLog());
+      svnUrl = svnInfo.getProperty("URL", UNKNOWN);
+      revision = svnInfo.getProperty("Last Changed Rev", UNKNOWN);
     } catch (IOException ioe) {
       throw new MojoExecutionException("Exception reading svn info", ioe);
     }

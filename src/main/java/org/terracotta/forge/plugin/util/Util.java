@@ -4,15 +4,19 @@
 package org.terracotta.forge.plugin.util;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -41,6 +45,7 @@ public class Util {
     execTask.setOutput(outputFile);
     execTask.setDir(workDir != null ? workDir : new File(System.getProperty("user.dir")));
     execTask.setExecutable(command);
+    execTask.setResultProperty("svninfoexitcode");
     if (params != null) {
       for (String param : params) {
         execTask.createArg().setValue(param);
@@ -60,14 +65,15 @@ public class Util {
     }
   }
 
-  public static String getSvnInfo(String svnRepo) {
+  public static Properties getSvnInfo(String svnRepo, Log log) throws IOException {
     String svnCommand = "svn";
     String svnHome = System.getenv("SVN_HOME");
     if (svnHome != null) {
       svnCommand = svnHome + "/bin/svn";
     }
-
-    return exec(svnCommand, Arrays.asList("info", svnRepo), null);
+    String result = exec(svnCommand, Arrays.asList("info", svnRepo), null);
+    log.debug("svn info " + svnRepo + ": " + result);
+    return parseSvnInfo(result);
   }
 
   public static String getZipEntries(File file) throws IOException {
@@ -82,5 +88,18 @@ public class Util {
     } finally {
       zipFile.close();
     }
+  }
+  
+  public static Properties parseSvnInfo(String svnInfo) throws IOException {
+    Properties props = new Properties();
+    BufferedReader br = new BufferedReader(new StringReader(svnInfo));
+    String line = null;
+    while ((line = br.readLine()) != null) {
+      String[] tokens = line.split(":", 2);
+      if (tokens.length == 2) {
+        props.put(tokens[0].trim(), tokens[1].trim());
+      }
+    }
+    return props;
   }
 }
