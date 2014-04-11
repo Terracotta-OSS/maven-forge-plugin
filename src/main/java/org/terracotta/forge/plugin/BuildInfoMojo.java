@@ -136,14 +136,6 @@ public class BuildInfoMojo extends AbstractMojo {
       checkMatchingBranch(guessBranchOrTagFromUrl(osSvnUrl), guessBranchOrTagFromUrl(svnUrl));
     }
 
-    if (eeRootPath != null && osRootPath != null) {
-      String eeBranch = guessBranchOrTagFromUrl(eeSvnUrl);
-      String osBranch = guessBranchOrTagFromUrl(osSvnUrl);
-      if (!eeBranch.equals(osBranch)) { throw new MojoExecutionException("branch doesn't match between EE (" + eeBranch
-                                                                         + ") and OS (" + osBranch
-                                                                         + "). Check your svn:externals property"); }
-    }
-
     String fullRevision = revision;
     // we use the template EE_REVISION-OS_REVISION
     if (!UNKNOWN.equals(eeRevision)) {
