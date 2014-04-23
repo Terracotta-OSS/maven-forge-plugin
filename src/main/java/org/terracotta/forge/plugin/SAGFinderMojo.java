@@ -7,8 +7,7 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
-
-import com.softwareag.ibit.tools.util.Finder;
+import org.terracotta.forge.plugin.util.Util;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -86,7 +85,7 @@ public class SAGFinderMojo extends AbstractMojo {
       return;
     }
     try {
-      if (!isEmpty(scanDirectory)) {
+      if (!Util.isEmpty(scanDirectory)) {
         doScanDirectory();
       } else {
         doScanDependencies();
@@ -103,7 +102,8 @@ public class SAGFinderMojo extends AbstractMojo {
 
   private void doScanDirectory() throws Exception {
     getLog().info("About to scan " + scanDirectory + " with Finder");
-    if (isFlaggedByFinder(scanDirectory)) { throw new MojoExecutionException("Finder found Oracle jar(s)"); }
+    if (Util.isFlaggedByFinder(scanDirectory, exclusionList, getLog())) { throw new MojoExecutionException(
+                                                                                                           "Finder found Oracle jar(s)"); }
   }
 
   private void doScanDependencies() throws Exception {
@@ -113,7 +113,7 @@ public class SAGFinderMojo extends AbstractMojo {
     artifacts = filterExcludeArtifactIds(artifacts);
     for (Artifact a : artifacts) {
       getLog().info("Scanning " + a);
-      if (isFlaggedByFinder(a.getFile().getAbsolutePath())) {
+      if (Util.isFlaggedByFinder(a.getFile().getAbsolutePath(), exclusionList, getLog())) {
         //
         throw new MojoExecutionException("Artifact " + a + " was flagged by Finder");
       }
@@ -133,7 +133,7 @@ public class SAGFinderMojo extends AbstractMojo {
   }
 
   private Set<Artifact> filterExcludeGroupIds(Set<Artifact> artifacts) {
-    if (isEmpty(excludeGroupIds)) return artifacts;
+    if (Util.isEmpty(excludeGroupIds)) return artifacts;
     Set<Artifact> result = new HashSet<Artifact>();
     List<String> excludes = Arrays.asList(excludeGroupIds.split("\\s*,\\s*"));
     for (Artifact a : artifacts) {
@@ -147,7 +147,7 @@ public class SAGFinderMojo extends AbstractMojo {
   }
 
   private Set<Artifact> filterExcludeArtifactIds(Set<Artifact> artifacts) {
-    if (isEmpty(excludeArtifactIds)) return artifacts;
+    if (Util.isEmpty(excludeArtifactIds)) return artifacts;
     Set<Artifact> result = new HashSet<Artifact>();
     List<String> excludes = Arrays.asList(excludeArtifactIds.split("\\s*,\\s*"));
     for (Artifact a : artifacts) {
@@ -158,28 +158,5 @@ public class SAGFinderMojo extends AbstractMojo {
       }
     }
     return result;
-  }
-
-  private boolean isFlaggedByFinder(String file) throws Exception {
-    Finder finder = new Finder();
-    finder.setPackageOnlySearch(true);
-    finder.setSearchRootDirectory(file);
-    finder.setUniqueEnabled(true);
-    if (!isEmpty(exclusionList)) {
-      finder.setExcludesListFilename(exclusionList);
-    }
-    List<String> resultList = finder.doSearch();
-    if (resultList.size() > 0) {
-      for (String result : resultList) {
-        getLog().error("Flagged: " + result);
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  private static boolean isEmpty(String s) {
-    return s == null || s.length() == 0;
   }
 }

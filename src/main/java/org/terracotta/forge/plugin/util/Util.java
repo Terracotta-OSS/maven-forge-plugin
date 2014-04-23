@@ -8,6 +8,8 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
 
+import com.softwareag.ibit.tools.util.Finder;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -24,6 +26,7 @@ import java.util.zip.ZipFile;
  * @author hhuynh
  */
 public class Util {
+  public static final String DEFAULT_FINDER_EXCLUSIONS = "jackson-xc";
 
   /**
    * Run a shell command and return the output as String
@@ -101,5 +104,29 @@ public class Util {
       }
     }
     return props;
+  }
+
+  public static boolean isFlaggedByFinder(String file, String exclusionList, Log log) throws IOException {
+    Finder finder = new Finder();
+    finder.setPackageOnlySearch(true);
+    finder.setSearchRootDirectory(file);
+    finder.setUniqueEnabled(true);
+    if (!isEmpty(exclusionList)) {
+      log.info("Scanning with exclusionList: " + exclusionList);
+      finder.setExcludesListFilename(exclusionList);
+    }
+    List<String> resultList = finder.doSearch();
+    if (resultList.size() > 0) {
+      for (String result : resultList) {
+        log.error("Flagged: " + result);
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  public static boolean isEmpty(String s) {
+    return s == null || s.length() == 0;
   }
 }
