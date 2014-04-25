@@ -200,7 +200,6 @@ public class BuildInfoMojo extends AbstractMojo {
   static void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
     // if the user did not check out the ee branch, it's going to be unknown: we skip the check
     if (UNKNOWN.equals(eeBranch)) { return; }
-
     // For Ehcache branches, they don't really match 100%
     // Ehcache EE branch: ehcache-core-ee-2.8.x
     // Ehcache OS branch: ehcache-2.8.x
