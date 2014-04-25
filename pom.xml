@@ -4,7 +4,7 @@
   <groupId>org.terracotta</groupId>
   <artifactId>maven-forge-plugin</artifactId>
   <packaging>maven-plugin</packaging>
-  <version>1.2.5</version>
+  <version>1.2.6-SNAPSHOT</version>
   <name>maven-forge-plugin</name>
   <description>Util plugin for Terracotta Forge projects</description>
   <url>http://forge.terracotta.org</url>
@@ -12,10 +12,6 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <finder.version>2.05a</finder.version>
-  
-    <metadata.build.jenkins.url>http://jenkins.terracotta.eur.ad.sag:8080/job/maven-forge-plugin_trunk_releaser/14/</metadata.build.jenkins.url>
-    <metadata.build.maven.active.profiles>terracotta-repositories,release,tc-publish</metadata.build.maven.active.profiles>
-    <metadata.svn.revision>43599</metadata.svn.revision>
   </properties>
 
   <dependencies>
