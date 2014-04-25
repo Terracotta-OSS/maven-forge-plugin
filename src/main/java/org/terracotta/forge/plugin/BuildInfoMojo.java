@@ -30,7 +30,7 @@ public class BuildInfoMojo extends AbstractMojo {
 
   private static final String URL = "URL";
 
-  private static final String UNKNOWN        = "unknown";
+  static final String         UNKNOWN          = "unknown";
 
   /**
    * project instance. Injected automatically by Maven
@@ -175,7 +175,7 @@ public class BuildInfoMojo extends AbstractMojo {
       }
       return url.substring(startIndex + 5, endIndex);
     }
-    return "unknown";
+    return UNKNOWN;
   }
 
   private void generateBuildInfoFile() throws MojoExecutionException {
@@ -197,7 +197,10 @@ public class BuildInfoMojo extends AbstractMojo {
     project.getProperties().setProperty(key, value);
   }
 
-  private static void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
+  static void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
+    // if the user did not check out the ee branch, it's going to be unknown: we skip the check
+    if (UNKNOWN.equals(eeBranch)) { return; }
+
     // For Ehcache branches, they don't really match 100%
     // Ehcache EE branch: ehcache-core-ee-2.8.x
     // Ehcache OS branch: ehcache-2.8.x
