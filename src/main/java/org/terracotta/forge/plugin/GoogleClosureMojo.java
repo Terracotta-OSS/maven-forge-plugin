@@ -93,7 +93,7 @@ public class GoogleClosureMojo extends AbstractMojo {
     }
 
     File outFile = new File(outputFile);
-    if (!outFile.getParentFile().mkdirs()) { throw new MojoExecutionException("Couldn't create file: " + outFile); }
+    outFile.getParentFile().mkdirs();
     List<SourceFile> inputs = new ArrayList<SourceFile>();
     for (FileSet fs : filesets) {
       for (String file : fsManager.getIncludedFiles(fs)) {
