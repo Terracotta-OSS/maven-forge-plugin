@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.terracotta</groupId>
@@ -16,6 +18,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>15.0</version>
+    </dependency>  
+    <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-container-default</artifactId>
       <version>1.5.5</version>
@@ -23,12 +30,12 @@
     <dependency>
       <groupId>org.apache.ant</groupId>
       <artifactId>ant</artifactId>
-      <version>1.8.1</version>
+      <version>1.9.4</version>
     </dependency>
     <dependency>
       <groupId>org.apache.ant</groupId>
       <artifactId>ant-launcher</artifactId>
-      <version>1.8.1</version>
+      <version>1.9.4</version>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
@@ -61,7 +68,7 @@
       <groupId>com.softwareag.ibit.tools</groupId>
       <artifactId>finder</artifactId>
       <version>${finder.version}</version>
-      <optional>true</optional>      
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>
@@ -74,6 +81,12 @@
       <artifactId>maven-core</artifactId>
       <version>3.0.5</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>sisu-guava</artifactId>
+          <groupId>org.sonatype.sisu</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -86,11 +99,11 @@
       <artifactId>maven-dependency-tree</artifactId>
       <version>2.1</version>
     </dependency>
-     <dependency>
-       <groupId>org.reflections</groupId>
-       <artifactId>reflections</artifactId>
-       <version>0.9.9-RC1</version>
-     </dependency>    
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <version>0.9.9-RC1</version>
+    </dependency>
     <dependency>
       <groupId>jaxen</groupId>
       <artifactId>jaxen</artifactId>
@@ -106,28 +119,38 @@
       <artifactId>mail</artifactId>
       <version>1.4.7</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.maven.shared</groupId>
+      <artifactId>file-management</artifactId>
+      <version>1.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.javascript</groupId>
+      <artifactId>closure-compiler</artifactId>
+      <version>v20131014</version>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-plugin-plugin</artifactId>
-            <version>3.2</version>
-            <configuration>
-              <!-- see http://jira.codehaus.org/browse/MNG-5346 -->
-              <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
-              <goalPrefix>forge</goalPrefix>
-            </configuration>
-            <executions>
-              <execution>
-                <id>mojo-descriptor</id>
-                <goals>
-                  <goal>descriptor</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>3.2</version>
+        <configuration>
+          <!-- see http://jira.codehaus.org/browse/MNG-5346 -->
+          <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+          <goalPrefix>forge</goalPrefix>
+        </configuration>
+        <executions>
+          <execution>
+            <id>mojo-descriptor</id>
+            <goals>
+              <goal>descriptor</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.1</version>
@@ -146,7 +169,7 @@
           <version>2.4.1</version>
         </plugin>
         <plugin>
-        <groupId>org.codehaus.mojo</groupId>
+          <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
           <version>2.5.2</version>
           <configuration>
