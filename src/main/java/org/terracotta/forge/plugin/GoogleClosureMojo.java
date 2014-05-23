@@ -39,8 +39,17 @@ public class GoogleClosureMojo extends AbstractMojo {
   @Component
   protected MavenProject                 project;
 
-  @Parameter(property = "filesets", required = true)
+  /**
+   * either filesets or filelists has to be set. filelists has precedence over filesets if both are found
+   */
+  @Parameter(property = "filesets")
   private List<FileSet>                  filesets;
+
+  /**
+   * either filesets or filelists has to be set. filelists has precedence over filesets if both are found
+   */
+  @Parameter(property = "filelists")
+  private List<FileList>                 filelists;
 
   @Parameter(property = "outputFile", required = true)
   private String                         outputFile;
@@ -73,7 +82,10 @@ public class GoogleClosureMojo extends AbstractMojo {
    * 
    */
   public void execute() throws MojoExecutionException {
-    FileSetManager fsManager = new FileSetManager();
+    File outFile = new File(outputFile);
+    outFile.getParentFile().mkdirs();
+    List<SourceFile> inputs = getSourceFiles();
+
     CompilerOptions options = new CompilerOptions();
 
     CompilationLevel.valueOf(compilationLevel).setDebugOptionsForCompilationLevel(options);
@@ -90,15 +102,6 @@ public class GoogleClosureMojo extends AbstractMojo {
             : sm.replacement));
       }
       options.setSourceMapLocationMappings(locMap);
-    }
-
-    File outFile = new File(outputFile);
-    outFile.getParentFile().mkdirs();
-    List<SourceFile> inputs = new ArrayList<SourceFile>();
-    for (FileSet fs : filesets) {
-      for (String file : fsManager.getIncludedFiles(fs)) {
-        inputs.add(SourceFile.fromFile(new File(fs.getDirectory(), file)));
-      }
     }
 
     List<SourceFile> closesureExterns = new ArrayList<SourceFile>();
@@ -132,4 +135,25 @@ public class GoogleClosureMojo extends AbstractMojo {
     }
   }
 
+  private List<SourceFile> getSourceFiles() {
+    List<SourceFile> inputs = new ArrayList<SourceFile>();
+    if (filelists != null) {
+      for (FileList filelist : filelists) {
+        for (String file : filelist.files) {
+          inputs.add(SourceFile.fromFile(new File(filelist.directory, file)));
+        }
+      }
+    }
+
+    if (filesets != null) {
+      FileSetManager fsManager = new FileSetManager();
+      for (FileSet fs : filesets) {
+        for (String file : fsManager.getIncludedFiles(fs)) {
+          inputs.add(SourceFile.fromFile(new File(fs.getDirectory(), file)));
+        }
+      }
+    }
+
+    return inputs;
+  }
 }
