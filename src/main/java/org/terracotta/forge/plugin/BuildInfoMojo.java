@@ -28,7 +28,7 @@ import java.util.Properties;
 public class BuildInfoMojo extends AbstractMojo {
   private static final String LAST_CHANGED_REV = "Last Changed Rev";
 
-  private static final String URL = "URL";
+  private static final String URL              = "URL";
 
   static final String         UNKNOWN          = "unknown";
 
@@ -68,7 +68,13 @@ public class BuildInfoMojo extends AbstractMojo {
    */
   private String              buildInfoLocation;
 
-  private final Properties    buildInfoProps = new Properties();
+  /**
+   * @parameter property="skipBranchMatchingCheck" default-value="false"
+   * @optional
+   */
+  private boolean             skipBranchMatchingCheck;
+
+  private final Properties    buildInfoProps   = new Properties();
 
   /**
    * 
@@ -197,7 +203,11 @@ public class BuildInfoMojo extends AbstractMojo {
     project.getProperties().setProperty(key, value);
   }
 
-  static void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
+  private void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
+    if (skipBranchMatchingCheck) {
+      getLog().info("skipBranchMatchingCheck is true, skipping. osBranch is " + osBranch + " eeBranch is " + eeBranch);
+      return;
+    }
     // if the user did not check out the ee branch, it's going to be unknown: we skip the check
     if (UNKNOWN.equals(eeBranch)) { return; }
     // For Ehcache branches, they don't really match 100%
@@ -209,7 +219,7 @@ public class BuildInfoMojo extends AbstractMojo {
     String ee = eeBranch.replace("-core-ee", "");
 
     if (!os.equals(ee)) { throw new MojoExecutionException("branch doesn't match between EE (" + eeBranch
-                                                                       + ") and OS (" + osBranch
-                                                                       + "). Check your svn:externals property"); }
+                                                           + ") and OS (" + osBranch
+                                                           + "). Check your svn:externals property"); }
   }
 }
