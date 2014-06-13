@@ -203,7 +203,7 @@ public class BuildInfoMojo extends AbstractMojo {
     project.getProperties().setProperty(key, value);
   }
 
-  private void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
+  void checkMatchingBranch(String osBranch, String eeBranch) throws MojoExecutionException {
     if (skipBranchMatchingCheck) {
       getLog().info("skipBranchMatchingCheck is true, skipping. osBranch is " + osBranch + " eeBranch is " + eeBranch);
       return;
