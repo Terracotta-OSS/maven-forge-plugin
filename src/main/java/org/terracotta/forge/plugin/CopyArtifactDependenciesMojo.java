@@ -34,6 +34,12 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
   private boolean removeVersion;
 
   /**
+   * create shade-record of dependencies and write it to outputDir
+   */
+  @Parameter(required = false, defaultValue = "false")
+  private boolean createShadeRecord;
+
+  /**
    * copy dependencies
    */
   public void execute() throws MojoExecutionException {
@@ -46,6 +52,8 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
   }
 
   private void copyDeps(Collection<Artifact> deps) throws IOException {
+    StringBuilder shadeRecord = new StringBuilder();
+
     for (Artifact a : deps) {
       String filename = a.getFile().getName();
       if (a.isSnapshot()) {
@@ -59,6 +67,14 @@ public class CopyArtifactDependenciesMojo extends AbstractResolveDependenciesMoj
         FileUtils.deleteQuietly(destFile);
       }
       FileUtils.copyFile(a.getFile(), destFile);
+
+      if (createShadeRecord) {
+        shadeRecord.append(a.toString()).append("\n");
+      }
+    }
+
+    if (createShadeRecord) {
+      FileUtils.writeStringToFile(new File(outputDir, "shade-record.txt"), shadeRecord.toString());
     }
   }
 }
