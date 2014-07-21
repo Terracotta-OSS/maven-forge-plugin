@@ -11,7 +11,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <finder.version>2.05a</finder.version>
+    <finder.version>3.0</finder.version>
   </properties>
 
   <dependencies>
@@ -63,7 +63,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.softwareag.ibit.tools</groupId>
+      <groupId>com.softwareag.ibit.tools.util</groupId>
       <artifactId>finder</artifactId>
       <version>${finder.version}</version>
       <optional>true</optional>

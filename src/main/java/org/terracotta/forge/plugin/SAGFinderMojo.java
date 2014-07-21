@@ -6,7 +6,12 @@ package org.terracotta.forge.plugin;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.repository.RepositorySystem;
 import org.terracotta.forge.plugin.util.Util;
 
 import java.util.Arrays;
@@ -18,61 +23,60 @@ import java.util.Set;
  * Run SAG Finder tool on the compile and runtime dependencies
  * 
  * @author hhuynh
- * @goal sag-finder
- * @requiresDependencyResolution compile
  */
+@Mojo(name = "sag-finder", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 public class SAGFinderMojo extends AbstractMojo {
 
   /**
    * project instance. Injected automatically by Maven
-   * 
-   * @parameter property="project"
-   * @required
-   * @readonly
    */
-  protected MavenProject project;
+  @Parameter(required = true, property = "project", readonly = true)
+  private MavenProject     project;
 
   /**
-   * @parameter property="excludeGroupIds"
-   * @optional
+   * groupIds to be excluded
    */
-  private String         excludeGroupIds;
+  @Parameter(required = false)
+  private String           excludeGroupIds;
 
   /**
-   * @parameter property="excludeArtifactIds"
-   * @optional
+   * artfiactIds to be excluded
    */
-  private String         excludeArtifactIds;
+  @Parameter(required = false)
+  private String           excludeArtifactIds;
 
   /**
    * Allow skipping this mojo altogether
-   * 
-   * @parameter property="skipSagFinder" default-value="false"
-   * @optional
    */
-  private boolean        skip;
+  @Parameter(required = false, defaultValue = "false", property = "skipSagFinder")
+  private boolean          skip;
 
   /**
-   * @parameter property="onlyRunWhenSagDepsIsTrue" default-value="false"
-   * @optional
+   * Controls whether this mojo should run with -Dsag-deps
    */
-  private boolean        onlyRunWhenSagDepsIsTrue;
+  @Parameter(required = false, defaultValue = "false", property = "onlyRunWhenSagDepsIsTrue")
+  private boolean          onlyRunWhenSagDepsIsTrue;
 
   /**
    * Directory that would be scanned by Finder. If this is specify then dependencies of the project won't be scanned
-   * 
-   * @parameter property="scanDirectory"
-   * @optional
    */
-  private String         scanDirectory;
+  @Parameter(required = false)
+  private String           scanDirectory;
 
   /**
    * Exclusion list, only being used when scanDirectory is not null
-   * 
-   * @parameter property="exclusionList"
-   * @optional
    */
-  private String         exclusionList;
+  @Parameter(required = false)
+  private String           exclusionList;
+
+  /**
+   * Specify an artifact by its coordinate for exclusions
+   */
+  @Parameter(required = false)
+  private List<String>     excludeArtifacts;
+
+  @Component
+  private RepositorySystem repoSystem;
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public void execute() throws MojoExecutionException {
@@ -111,6 +115,7 @@ public class SAGFinderMojo extends AbstractMojo {
     Set<Artifact> artifacts = filterCompileAndRuntimeScope(project.getArtifacts());
     artifacts = filterExcludeGroupIds(artifacts);
     artifacts = filterExcludeArtifactIds(artifacts);
+    artifacts = filterExcludeArtifacts(artifacts);
     for (Artifact a : artifacts) {
       getLog().info("Scanning " + a);
       if (Util.isFlaggedByFinder(a.getFile().getAbsolutePath(), exclusionList, getLog())) {
@@ -155,6 +160,28 @@ public class SAGFinderMojo extends AbstractMojo {
         result.add(a);
       } else {
         getLog().info("Exclude " + a + " from scanning");
+      }
+    }
+    return result;
+  }
+
+  private Set<Artifact> filterExcludeArtifacts(Set<Artifact> artifacts) {
+    if (excludeArtifacts == null) return artifacts;
+    Set<Artifact> result = new HashSet<Artifact>();
+
+    Set<Artifact> excludes = new HashSet<Artifact>();
+    for (String coords : excludeArtifacts) {
+      excludes.add(Util.createArtifact(coords));
+    }
+
+    for (Artifact a : artifacts) {
+      for (Artifact excludedArtifact : excludes) {
+        if (a.getGroupId().equals(excludedArtifact.getGroupId())
+            && a.getArtifactId().equals(excludedArtifact.getArtifactId())) {
+          getLog().info("Exclude " + a + " from scanning");
+        } else {
+          result.add(a);
+        }
       }
     }
     return result;
