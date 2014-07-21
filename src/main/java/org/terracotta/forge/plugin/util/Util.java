@@ -4,8 +4,6 @@
 package org.terracotta.forge.plugin.util;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
@@ -21,8 +19,6 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -30,29 +26,6 @@ import java.util.zip.ZipFile;
  * @author hhuynh
  */
 public class Util {
-  public static final Pattern MAVEN_COORDS_REGX = Pattern.compile("([^: ]+):([^: ]+)(:([^: ]*)(:([^: ]+))?)?:([^: ]+)");
-
-  public static Artifact createArtifact(String coords) {
-    Matcher m = MAVEN_COORDS_REGX.matcher(coords);
-    if (!(m.matches())) { throw new IllegalArgumentException(
-                                                             "Bad artifact coordinates "
-                                                                 + coords
-                                                                 + ", expected format is <groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>"); }
-
-    String groupId = m.group(1);
-    String artifactId = m.group(2);
-    String extension = get(m.group(4), "jar");
-    String classifier = get(m.group(6), "");
-    String version = m.group(7);
-    // ( String groupId, String artifactId, String version, String type, String classifier )
-    Artifact artifact = new DefaultArtifact(groupId, artifactId, version, "compile", extension, classifier, null);
-    return artifact;
-  }
-
-  private static String get(String value, String defaultValue) {
-    return (((value == null) || (value.length() <= 0)) ? defaultValue : value);
-  }
-
   /**
    * Run a shell command and return the output as String
    */

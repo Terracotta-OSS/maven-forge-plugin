@@ -12,6 +12,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
+import org.terracotta.forge.plugin.util.MinimalArtifact;
 import org.terracotta.forge.plugin.util.Util;
 
 import java.util.Arrays;
@@ -70,7 +71,7 @@ public class SAGFinderMojo extends AbstractMojo {
   private String           exclusionList;
 
   /**
-   * Specify an artifact by its coordinate for exclusions
+   * Specify an artifact by its coordinate (groupId:artifactId) for exclusions
    */
   @Parameter(required = false)
   private List<String>     excludeArtifacts;
@@ -169,19 +170,23 @@ public class SAGFinderMojo extends AbstractMojo {
     if (excludeArtifacts == null) return artifacts;
     Set<Artifact> result = new HashSet<Artifact>();
 
-    Set<Artifact> excludes = new HashSet<Artifact>();
+    Set<MinimalArtifact> excludes = new HashSet<MinimalArtifact>();
     for (String coords : excludeArtifacts) {
-      excludes.add(Util.createArtifact(coords));
+      excludes.add(new MinimalArtifact(coords));
     }
 
     for (Artifact a : artifacts) {
-      for (Artifact excludedArtifact : excludes) {
+      boolean found = false;
+      for (MinimalArtifact excludedArtifact : excludes) {
         if (a.getGroupId().equals(excludedArtifact.getGroupId())
             && a.getArtifactId().equals(excludedArtifact.getArtifactId())) {
           getLog().info("Exclude " + a + " from scanning");
-        } else {
-          result.add(a);
+          found = true;
+          break;
         }
+      }
+      if (!found) {
+        result.add(a);
       }
     }
     return result;
