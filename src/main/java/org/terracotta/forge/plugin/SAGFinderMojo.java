@@ -108,6 +108,9 @@ public class SAGFinderMojo extends AbstractMojo {
 
   private void doScanDirectory() throws Exception {
     File scanDirectoryAbs = new File(scanDirectory);
+    if (!scanDirectoryAbs.exists() || !scanDirectoryAbs.isDirectory()) { throw new MojoExecutionException(
+                                                                                                          scanDirectory
+                                                                                                              + " is not a directory or doesn't exist"); }
     getLog().info("About to scan " + scanDirectoryAbs.getAbsolutePath() + " with Finder");
     if (Util.isFlaggedByFinder(scanDirectoryAbs.getAbsolutePath(), exclusionList, getLog())) { throw new MojoExecutionException(
                                                                                                            "Finder found Oracle jar(s)"); }
