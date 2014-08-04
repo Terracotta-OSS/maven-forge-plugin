@@ -15,6 +15,7 @@ import org.apache.maven.repository.RepositorySystem;
 import org.terracotta.forge.plugin.util.MinimalArtifact;
 import org.terracotta.forge.plugin.util.Util;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -106,8 +107,9 @@ public class SAGFinderMojo extends AbstractMojo {
   }
 
   private void doScanDirectory() throws Exception {
-    getLog().info("About to scan " + scanDirectory + " with Finder");
-    if (Util.isFlaggedByFinder(scanDirectory, exclusionList, getLog())) { throw new MojoExecutionException(
+    File scanDirectoryAbs = new File(scanDirectory);
+    getLog().info("About to scan " + scanDirectoryAbs.getAbsolutePath() + " with Finder");
+    if (Util.isFlaggedByFinder(scanDirectoryAbs.getAbsolutePath(), exclusionList, getLog())) { throw new MojoExecutionException(
                                                                                                            "Finder found Oracle jar(s)"); }
   }
 
