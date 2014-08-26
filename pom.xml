@@ -66,7 +66,7 @@
       <groupId>com.softwareag.ibit.tools.util</groupId>
       <artifactId>finder</artifactId>
       <version>${finder.version}</version>
-      <optional>true</optional>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>
