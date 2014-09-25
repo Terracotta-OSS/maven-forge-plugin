@@ -1,0 +1,65 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.terracotta.test</groupId>
+    <artifactId>sagfindermojo</artifactId>
+    <version>4.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>Test SagFinderMojo</name>
+
+    <properties>
+        <jersey.version>2.6</jersey.version>
+        <hk2.version>2.2.0</hk2.version>
+        <jackson.version>2.3.3</jackson.version>
+        <finder.version>3.5.1.0.1</finder.version>
+        <sag-deps>true</sag-deps>
+        <jetty.version>8.1.15.v20140411</jetty.version>
+
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-server</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.terracotta</groupId>
+                <artifactId>maven-forge-plugin</artifactId>
+                <version>@pom.version@</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.softwareag.ibit.tools.util</groupId>
+                        <artifactId>finder</artifactId>
+                        <version>${finder.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>run-sag-finder</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>sag-finder</goal>
+                        </goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <onlyRunWhenSagDepsIsTrue>true</onlyRunWhenSagDepsIsTrue>
+                            <excludeGroupIds>gf-3122,gf-40</excludeGroupIds>
+                            <excludeArtifacts>
+                                <excludeArtifact>org.codehaus.jackson:jackson-xc</excludeArtifact>
+                                <excludeArtifact>javax.validation:validation-api</excludeArtifact>
+                            </excludeArtifacts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
