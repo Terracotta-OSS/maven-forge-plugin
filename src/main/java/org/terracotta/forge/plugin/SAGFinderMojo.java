@@ -6,6 +6,7 @@ package org.terracotta.forge.plugin;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -127,7 +128,7 @@ public class SAGFinderMojo extends AbstractMojo {
       getLog().info("Scanning " + a);
       if (Util.isFlaggedByFinder(a.getFile().getAbsolutePath(), exclusionList, getLog())) {
         //
-        throw new MojoExecutionException("Artifact " + a + " was flagged by Finder");
+        throw new MojoFailureException("Artifact " + a + " was flagged by Finder");
       }
     }
   }

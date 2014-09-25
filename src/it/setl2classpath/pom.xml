@@ -29,19 +29,20 @@
       <plugin>
         <groupId>org.terracotta</groupId>
         <artifactId>maven-forge-plugin</artifactId>
-        <configuration>
+          <version>@pom.version@</version>
+          <configuration>
           <!--&lt;!&ndash; Specify the MyMojo parameter &ndash;&gt;-->
           <!--<outputDirectory>target/test-harness/project-to-test</outputDirectory>-->
         </configuration>
-        <!--<executions>-->
-          <!--<execution>-->
-            <!--<id>setl2classpath</id>-->
-            <!--<phase>process-test-resources</phase>-->
-            <!--<goals>-->
-              <!--<goal>setl2classpath</goal>-->
-            <!--</goals>-->
-          <!--</execution>-->
-        <!--</executions>-->
+        <executions>
+          <execution>
+            <id>setl2classpath</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>setl2classpath</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

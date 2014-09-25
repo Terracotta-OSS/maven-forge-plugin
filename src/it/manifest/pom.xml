@@ -15,7 +15,8 @@
       <plugin>
         <groupId>org.terracotta</groupId>
         <artifactId>maven-forge-plugin</artifactId>
-        <configuration>
+          <version>@pom.version@</version>
+          <configuration>
           <manifest.file>MANIFEST.MF</manifest.file>
           <manifestEntries>
             <Main-Class>com.tc.cli.CommandLineMain</Main-Class>
@@ -26,6 +27,23 @@
           <!-- this will exclude security-REST, not available in the open source version -->
           <excludeGroupIds>com.terracotta,org.apache.shiro,gf-3122</excludeGroupIds>
         </configuration>
+          <executions>
+              <execution>
+                  <id>integration-test-manifest</id>
+                  <phase>initialize</phase>
+                  <goals>
+                      <goal>manifest</goal>
+                  </goals>
+                  <configuration>
+                      <debug>true</debug>
+                      <postBuildHookScript>verify</postBuildHookScript>
+                      <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+                      <pomIncludes>
+                          <pomInclude>manifest/pom.xml</pomInclude>
+                      </pomIncludes>
+                  </configuration>
+              </execution>
+          </executions>
       </plugin>
     </plugins>
   </build>

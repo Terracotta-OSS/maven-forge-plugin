@@ -43,6 +43,8 @@
       <plugin>
         <groupId>org.terracotta</groupId>
         <artifactId>maven-forge-plugin</artifactId>
+          <version>@pom.version@</version>
+
         <configuration>
           <enforceGroupId>net.sf.ehcache</enforceGroupId>
           <enforceArtifactId>management-ee-ehcache-impl</enforceArtifactId>
@@ -50,6 +52,15 @@
           <!-- this will exclude security-REST, not available in the open source version -->
           <excludeGroupIds>com.terracotta,org.apache.shiro,gf-3122</excludeGroupIds>
         </configuration>
+          <executions>
+              <execution>
+                  <id>enforcematchingdependencies</id>
+                  <phase>initialize</phase>
+                  <goals>
+                      <goal>enforceDependencies</goal>
+                  </goals>
+              </execution>
+          </executions>
       </plugin>
     </plugins>
   </build>

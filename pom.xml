@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.terracotta</groupId>
@@ -11,7 +13,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <finder.version>3.0</finder.version>
+    <finder.version>3.5.1.0.1</finder.version>
   </properties>
 
   <dependencies>
@@ -19,7 +21,7 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>15.0</version>
-    </dependency>  
+    </dependency>
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-container-default</artifactId>
@@ -157,6 +159,34 @@
           <target>1.5</target>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-invoker-plugin</artifactId>
+        <version>1.9</version>
+        <configuration>
+          <skipInvocation>${skipTests}</skipInvocation>
+          <debug>true</debug>
+          <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+          <preBuildHookScript>setup</preBuildHookScript>
+          <postBuildHookScript>verify</postBuildHookScript>
+          <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
+          <settingsFile>src/it/settings.xml</settingsFile>
+          <mavenOpts>-Djava.io.tmpdir=${project.build.directory} -Dsag-deps=true</mavenOpts>
+          <goals>
+            <goal>clean</goal>
+            <goal>initialize</goal>
+          </goals>
+        </configuration>
+        <executions>
+          <execution>
+            <id>run-all-integration-tests</id>
+            <goals>
+              <goal>install</goal>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -195,87 +225,7 @@
   </distributionManagement>
   <scm>
     <connection>scm:git:git@github.com:Terracotta-OSS/maven-forge-plugin.git</connection>
-    <developerConnection>scm:git:https://github.com/Terracotta-OSS/maven-forge-plugin.git</developerConnection>
+    <developerConnection>scm:git:https://github.com/Terracotta-OSS/maven-forge-plugin.git
+    </developerConnection>
   </scm>
-
-
-  <profiles>
-    <profile>
-      <id>ittests</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-invoker-plugin</artifactId>
-            <version>1.8</version>
-            <configuration>
-              <skipInvocation>${skipTests}</skipInvocation>
-            </configuration>
-            <executions>
-              <execution>
-                <id>integration-test-setl2claspath</id>
-                <configuration>
-                  <debug>true</debug>
-                  <postBuildHookScript>verify</postBuildHookScript>
-                  <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-                  <pomIncludes>
-                    <pomInclude>setl2classpath/project-depending-on-terracotta.xml</pomInclude>
-                  </pomIncludes>
-                  <goals>
-                    <goal>clean</goal>
-                    <goal>${project.groupId}:${project.artifactId}:${project.version}:setl2classpath</goal>
-                  </goals>
-                </configuration>
-                <goals>
-                  <goal>install</goal>
-                  <goal>run</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>integration-test-enforcematchingdependencies</id>
-                <configuration>
-                  <debug>true</debug>
-                  <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-                  <pomIncludes>
-                    <pomInclude>enforcematchingdependencies/pom.xml</pomInclude>
-                  </pomIncludes>
-                  <goals>
-                    <goal>clean</goal>
-                    <goal>${project.groupId}:${project.artifactId}:${project.version}:enforceDependencies</goal>
-                  </goals>
-                </configuration>
-                <goals>
-                  <goal>install</goal>
-                  <goal>run</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>integration-test-manifest</id>
-                <configuration>
-                  <debug>true</debug>
-                  <postBuildHookScript>verify</postBuildHookScript>
-                  <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-                  <pomIncludes>
-                    <pomInclude>manifest/pom.xml</pomInclude>
-                  </pomIncludes>
-                  <goals>
-                    <goal>clean</goal>
-                    <goal>${project.groupId}:${project.artifactId}:${project.version}:manifest</goal>
-                  </goals>
-                </configuration>
-                <goals>
-                  <goal>install</goal>
-                  <goal>run</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
-
 </project>

@@ -105,10 +105,14 @@ public class Util {
   }
 
   public static boolean isFlaggedByFinder(String file, String exclusionList, Log log) throws IOException {
+    boolean flagged = false;
+    ClassLoader mojoOriginalClassLoader = Thread.currentThread().getContextClassLoader();
+    Thread.currentThread().setContextClassLoader(Finder.class.getClassLoader());
+
     Finder finder = new Finder();
-    finder.setPackageOnlySearch(true);
+//    finder.setPackageOnlySearch(true);
     finder.setSearchRootDirectory(file);
-    finder.setUniqueEnabled(true);
+//    finder.setUniqueEnabled(true);
     if (!isEmpty(exclusionList)) {
       log.info("Scanning with exclusionList: " + exclusionList);
       finder.setExcludesListFilename(exclusionList);
@@ -118,10 +122,13 @@ public class Util {
       for (String result : resultList) {
         log.error("Flagged: " + result);
       }
-      return true;
+      flagged = true;
     } else {
-      return false;
+      flagged = false;
     }
+
+    Thread.currentThread().setContextClassLoader(mojoOriginalClassLoader);
+    return flagged;
   }
 
   public static boolean isEmpty(String s) {
