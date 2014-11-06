@@ -15,8 +15,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
@@ -178,21 +176,12 @@ public class ManifestMojo extends AbstractMojo {
   private void addBuildAttributes(Attributes attributes) throws MojoExecutionException {
     final String UNKNOWN = "unknown";
     final String BUILDINFO = "BuildInfo-";
-    String host = UNKNOWN;
     String svnUrl = UNKNOWN;
     String revision = UNKNOWN;
 
-    String user = System.getProperty("user.name", UNKNOWN);
     String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
-    try {
-      host = InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      getLog().warn("Exception while finding host name", e);
-    }
 
     attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-    attributes.putValue(BUILDINFO + "User", user);
-    attributes.putValue(BUILDINFO + "Host", host);
     attributes.putValue(BUILDINFO + "Timestamp", timestamp);
 
     if (rootPath == null) {

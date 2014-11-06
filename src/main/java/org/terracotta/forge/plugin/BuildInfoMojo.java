@@ -20,7 +20,7 @@ import java.util.Properties;
 /**
  * Collect build info of the current project. Default rootPath is ${project.basedir}. This is used to get svn info The
  * plugin will set these system properties "build.revision" == from svn info "Last Change Rev" "build.svn.url" == from
- * svn info "URL" "build.host" "build.user" "build.timestamp"
+ * svn info "URL" "build.timestamp"
  * 
  * @author hhuynh
  * @goal buildinfo
@@ -114,18 +114,7 @@ public class BuildInfoMojo extends AbstractMojo {
       throw new MojoExecutionException("Error reading svn info", ioe);
     }
 
-    String host = UNKNOWN;
-    String user = System.getProperty("user.name", UNKNOWN);
     String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
-    try {
-      host = InetAddress.getLocalHost().getHostName();
-    } catch (Exception e) {
-      getLog().warn("Exception while finding host name", e);
-    }
-
-    setBuildInfoProperty("build.user", user);
-    setBuildInfoProperty("build.host", host);
-    setBuildInfoProperty("build.hostname", host);
     setBuildInfoProperty("build.timestamp", timestamp);
 
     if (eeRootPath != null) {
