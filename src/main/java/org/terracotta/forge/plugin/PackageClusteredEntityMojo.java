@@ -42,10 +42,7 @@ public class PackageClusteredEntityMojo extends AbstractArtifactResolvingMojo {
   @Component
   protected MavenProject       project;
 
-  @Parameter(required = true)
-  private File                 packagingDir;
-
-  @Parameter(required = false)
+  @Parameter(required = false, defaultValue = ".class_terracotta")
   private String               privateClassSuffix;
 
   @Parameter(required = false, defaultValue = "server-content.txt")
@@ -77,28 +74,27 @@ public class PackageClusteredEntityMojo extends AbstractArtifactResolvingMojo {
       getLog().info("Skipping clustered entity packaging");
       return;
     }
-  //  if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
+    File buildDirectory = new File(project.getBuild().getOutputDirectory());
 
     ShadeRecordTracker shadeRecordTracker = new ShadeRecordTracker();
     // Extract jars into respective folders
     Artifact serverImpl = completeArtifact(createArtifact(serverArtifact));
     shadeRecordTracker.add(serverImpl);
-    extractArtifactJarTo(new File(packagingDir, "server" + File.separator + serverImpl.getFile().getName()), serverImpl);
+    extractArtifactJarTo(new File(buildDirectory, "server" + File.separator + serverImpl.getFile().getName()), serverImpl);
     Artifact clientImpl = completeArtifact(createArtifact(clientArtifact));
     shadeRecordTracker.add(clientImpl);
-    extractArtifactJarTo(new File(packagingDir, "client" + File.separator + clientImpl.getFile().getName()), clientImpl);
+    extractArtifactJarTo(new File(buildDirectory, "client" + File.separator + clientImpl.getFile().getName()), clientImpl);
     for (Artifact dependency : collectDependencies(serverImpl, clientImpl)) {
       shadeRecordTracker.add(dependency);
-      extractArtifactJarTo(new File(packagingDir, "common" + File.separator + dependency.getFile()
+      extractArtifactJarTo(new File(buildDirectory, "common" + File.separator + dependency.getFile()
           .getName()), dependency);
     }
 
-    String buildDirectory = project.getBuild().getOutputDirectory() + File.separator;
-    File serverEntriesFile = new File(packagingDir, serverContentFilename);
-    File clientEntriesFile = new File(packagingDir, clientContentFilename);
+    File serverEntriesFile = new File(buildDirectory, serverContentFilename);
+    File clientEntriesFile = new File(buildDirectory, clientContentFilename);
 
     // convert .class into .clazz under embedded resources
-    if (privateClassSuffix != null) {
+    if (!privateClassSuffix.trim().equals("")) {
       getLog().info("Renaming private classes to use suffix " + privateClassSuffix);
       Set<String> commonResources = new LinkedHashSet<String>(renameResources(buildDirectory, "common"));
       Set<String> clientResources = new LinkedHashSet<String>(renameResources(buildDirectory, "client"));
@@ -113,7 +109,7 @@ public class PackageClusteredEntityMojo extends AbstractArtifactResolvingMojo {
     // Extract the contents of the API jar into the top level of the distribution jar
     Artifact api = completeArtifact(createArtifact(apiArtifact));
     shadeRecordTracker.add(api);
-    extractArtifactJarTo(packagingDir, api);
+    extractArtifactJarTo(buildDirectory, api);
 
     if (attachJavadoc) {
       // Copy over the javadoc from the API package
@@ -134,7 +130,7 @@ public class PackageClusteredEntityMojo extends AbstractArtifactResolvingMojo {
       project.addAttachedArtifact(javadocArtifact);
     }
     try {
-      shadeRecordTracker.writeTo(packagingDir);
+      shadeRecordTracker.writeTo(buildDirectory);
     } catch (FileNotFoundException e) {
       throw new MojoExecutionException("Failed to create shade record", e);
     }
@@ -179,20 +175,20 @@ public class PackageClusteredEntityMojo extends AbstractArtifactResolvingMojo {
     }
   }
 
-  private Set<String> renameResources(final String buildDirectory, final String subDir) {
-    final Iterator it;File dir = new File(packagingDir, subDir);
+  private Set<String> renameResources(final File buildDirectory, final String subDir) {
+    File dir = new File(buildDirectory, subDir);
     if (!dir.isDirectory()) return Collections.emptySet();
     Set<String> renamed = new LinkedHashSet<String>();
-    it = FileUtils.iterateFiles(dir, null, true);
+    final Iterator it = FileUtils.iterateFiles(dir, null, true);
     while (it.hasNext()) {
       File resource = (File) it.next();
       if (resource.getName().endsWith(".class")) {
         File clazzFile = new File(resource.getParentFile(), resource.getName()
             .replace(".class", privateClassSuffix));
         resource.renameTo(clazzFile);
-        renamed.add(cleanupSuffix(buildDirectory, clazzFile.getAbsolutePath()));
+        renamed.add(cleanupSuffix(buildDirectory.getAbsolutePath() + File.separator, clazzFile.getAbsolutePath()));
       } else {
-        renamed.add(cleanupSuffix(buildDirectory, resource.getAbsolutePath()));
+        renamed.add(cleanupSuffix(buildDirectory.getAbsolutePath() + File.separator, resource.getAbsolutePath()));
       }
     }
     return renamed;
