@@ -77,7 +77,7 @@ public class PackageClusteredEntityMojo extends AbstractArtifactResolvingMojo {
       getLog().info("Skipping clustered entity packaging");
       return;
     }
-    if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
+  //  if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
 
     ShadeRecordTracker shadeRecordTracker = new ShadeRecordTracker();
     // Extract jars into respective folders
