@@ -69,7 +69,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Exclusion list, only being used when scanDirectory is not null
    */
-  @Parameter(required = false)
+  @Parameter(required = false, property = "exclusionList")
   private String           exclusionList;
 
   /**
