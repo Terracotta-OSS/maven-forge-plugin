@@ -63,7 +63,7 @@ public class SAGFinderMojo extends AbstractMojo {
   /**
    * Directory that would be scanned by Finder. If this is specify then dependencies of the project won't be scanned
    */
-  @Parameter(required = false)
+  @Parameter(required = false, property = "scanDirectory")
   private String           scanDirectory;
 
   /**
