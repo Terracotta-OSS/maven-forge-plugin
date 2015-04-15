@@ -81,13 +81,19 @@ public class SetL2ClasspathMojo extends AbstractMojo {
     }
   }
 
+  private boolean isTerracottaJar(Artifact artifact) {
+    return (artifact.getArtifactId().equals("terracotta") && artifact.getGroupId().equals("org.terracotta"))
+            || (artifact.getArtifactId().equals("terracotta-ee") && artifact.getGroupId().equals("com.terracottatech"));
+  }
+
   private File getTerracottaJar() {
     @SuppressWarnings("unchecked")
     Set<Artifact> artifacts = project.getDependencyArtifacts();
 
     for (Artifact a : artifacts) {
-      if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals("terracotta-ee"))
-              && a.getGroupId().equals("org.terracotta")) { return a.getFile(); }
+      if (isTerracottaJar(a)) {
+        return a.getFile();
+      }
     }
     return null;
   }
@@ -97,8 +103,7 @@ public class SetL2ClasspathMojo extends AbstractMojo {
     Set<Artifact> artifacts = project.getDependencyArtifacts();
 
     for (Artifact a : artifacts) {
-      if ((a.getArtifactId().equals("terracotta") || a.getArtifactId().equals("terracotta-ee"))
-              && a.getGroupId().equals("org.terracotta")) {
+      if (isTerracottaJar(a)) {
 
         StringBuilder sb = new StringBuilder();
         MavenProject pomProject = mavenProjectBuilder.buildFromRepository(a, remoteRepositories, localRepository);
