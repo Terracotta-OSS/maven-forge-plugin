@@ -1,5 +1,6 @@
 package org.terracotta.forge.plugin;
 
+import junit.framework.TestCase;
 import org.apache.maven.project.MavenProject;
 import org.junit.Assert;
 import org.junit.Test;
@@ -63,7 +64,7 @@ public class ManifestMojoTest {
         p.load(new FileReader(outputManifest));
 
         Assert.assertTrue(p.containsKey("BuildInfo-URL"));
-        Assert.assertTrue("Expected URL value", p.getProperty("BuildInfo-URL").equals(expectedURL));
+        TestCase.assertEquals(expectedURL, p.getProperty("BuildInfo-URL"));
         
 
     }
