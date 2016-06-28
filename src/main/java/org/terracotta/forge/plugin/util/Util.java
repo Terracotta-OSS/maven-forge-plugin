@@ -29,7 +29,7 @@ public class Util {
   /**
    * Run a shell command and return the output as String
    */
-  public static String exec(String command, List<String> params, File workDir) {
+  public static String exec(String command, List<String> params, File workDir, Log log) {
     File outputFile;
     try {
       outputFile = File.createTempFile("exec", ".out");
@@ -59,11 +59,13 @@ public class Util {
       reader = new FileReader(outputFile);
       return IOUtils.toString(reader);
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      // This should not be terminal, for example if svn is not installed or this is not an svn project
+      log.warn("Unable to use svn info : " + e);
     } finally {
       IOUtils.closeQuietly(reader);
       outputFile.delete();
     }
+    return "";
   }
 
   public static Properties getSvnInfo(String svnRepo, Log log) throws IOException {
@@ -72,7 +74,12 @@ public class Util {
     if (svnHome != null) {
       svnCommand = svnHome + "/bin/svn";
     }
-    String result = exec(svnCommand, Arrays.asList("info", svnRepo), null);
+    //This is for ease of testing
+    svnHome = System.getProperty("SVN_HOME");
+    if (svnHome != null) {
+      svnCommand = svnHome + "/bin/svn";
+    }
+    String result = exec(svnCommand, Arrays.asList("info", svnRepo), null, log);
     log.debug("svn info " + svnRepo + ": " + result);
     return parseSvnInfo(result);
   }
