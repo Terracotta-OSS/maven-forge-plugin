@@ -32,7 +32,7 @@ import java.util.jar.Manifest;
  * 
  * @author hhuynh
  * @goal manifest
- * @requiresDependencyResolution compile
+ * @requiresDependencyResolution runtime
  */
 public class ManifestMojo extends AbstractMojo {
 
@@ -90,6 +90,10 @@ public class ManifestMojo extends AbstractMojo {
     StringBuilder mavenStyleClassPath = new StringBuilder();
     StringBuilder classpath = new StringBuilder();
     for (Artifact a : artifacts) {
+
+      getLog().debug("Processing project artifact '" + a
+          + "'; isAddedToClasspath=" + a.getArtifactHandler().isAddedToClasspath()
+          + "; isIncludesDependencies=" + a.getArtifactHandler().isIncludesDependencies());
 
       if (excludedGroupIds.contains(a.getGroupId())) {
         getLog().info("Excluding " + a + " from manifest's classpath");
