@@ -18,6 +18,7 @@ import java.io.StringReader;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -79,6 +80,13 @@ public class Util {
     if (svnHome != null) {
       svnCommand = svnHome + "/bin/svn";
     }
+
+    if (System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")) {
+      if (new File(svnCommand + ".bat").exists()) {
+        svnCommand += ".bat";
+      }
+    }
+
     String result = exec(svnCommand, Arrays.asList("info", svnRepo), null, log);
     log.debug("svn info " + svnRepo + ": " + result);
     return parseSvnInfo(result);
