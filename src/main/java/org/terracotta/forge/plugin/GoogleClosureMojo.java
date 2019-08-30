@@ -140,7 +140,7 @@ public class GoogleClosureMojo extends AbstractMojo {
     if (filelists != null) {
       for (FileList filelist : filelists) {
         for (String file : filelist.files) {
-          inputs.add(SourceFile.fromFile(new File(filelist.directory, file)));
+          inputs.add(SourceFile.fromFile(new File(filelist.directory, file).getAbsolutePath()));
         }
       }
     }
@@ -149,7 +149,7 @@ public class GoogleClosureMojo extends AbstractMojo {
       FileSetManager fsManager = new FileSetManager();
       for (FileSet fs : filesets) {
         for (String file : fsManager.getIncludedFiles(fs)) {
-          inputs.add(SourceFile.fromFile(new File(fs.getDirectory(), file)));
+          inputs.add(SourceFile.fromFile(new File(fs.getDirectory(), file).getAbsolutePath()));
         }
       }
     }

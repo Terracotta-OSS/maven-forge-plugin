@@ -8,12 +8,15 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugin.surefire.SurefirePlugin;
+import org.apache.maven.plugin.surefire.log.PluginConsoleLogger;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.surefire.booter.SurefireBooterForkException;
 import org.apache.maven.surefire.suite.RunResult;
+import org.codehaus.plexus.logging.Logger;
+import org.codehaus.plexus.logging.console.ConsoleLogger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -62,7 +65,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   public void execute() throws MojoExecutionException, MojoFailureException {
     int absoluteTimeoutSecs = 0;
     try {
-      absoluteTimeoutSecs = Integer.valueOf(project.getProperties().getProperty("absolute-test-timeout-secs"));
+      absoluteTimeoutSecs = Integer.valueOf(getProject().getProperties().getProperty("absolute-test-timeout-secs"));
     } catch (Exception e) {
       // ignore
     }
@@ -92,7 +95,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
     try {
       // recheck should_skip_test maven propperty to decide if tests should be
       // skipped
-      String shouldSkipTestsValue = project.getProperties().getProperty("should_skip_tests");
+      String shouldSkipTestsValue = getProject().getProperties().getProperty("should_skip_tests");
       if (shouldSkipTestsValue != null) {
         getLog().warn("'should_skip_tests' property found, value is " + shouldSkipTestsValue
                           + ". This value overrides the 'skipTests' original setting.");
@@ -101,7 +104,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
       }
 
       // pre-scan groups
-      File reflectionFile = new File(project.getBuild().getDirectory(), "reflections.xml");
+      File reflectionFile = new File(getProject().getBuild().getDirectory(), "reflections.xml");
       if (useReflectionFile && reflectionFile.exists()) {
         List<String> includeList;
         try {
@@ -189,7 +192,9 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
         // test timeout, don't throw this exception
         // so Jenkins could parse JUnit reports and treat timeout failures as
         // regular failures
-        SurefireHelper.reportExecution(this, new RunResult(0, 0, 0, 0, "timeout", true), getLog());
+	  getLog().error(e);
+        PluginConsoleLogger logger = new PluginConsoleLogger(new ConsoleLogger(Logger.LEVEL_ERROR, "console"));
+        SurefireHelper.reportExecution(this, new RunResult(0, 0, 0, 0, "timeout", true), logger, null);
       } else {
         throw e;
       }
@@ -198,7 +203,7 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
         getLog().info("Fix Junit reports if needed");
         FixJUnitReportMojo fixUnitReportMojo = new FixJUnitReportMojo();
         fixUnitReportMojo.setPluginContext(getPluginContext());
-        fixUnitReportMojo.setProject(project);
+        fixUnitReportMojo.setProject(getProject());
         fixUnitReportMojo.execute();
       }
     }
