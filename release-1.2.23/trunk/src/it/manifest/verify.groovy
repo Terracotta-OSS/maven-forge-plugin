@@ -1,0 +1,10 @@
+File buildLog = new File( basedir, 'target/MANIFEST.MF' )
+assert buildLog.exists()
+
+assert 1 == buildLog.getText().count("Manifest-Version: 1.0")
+assert 1 == buildLog.getText().count("BuildInfo-Revision: unknown")
+assert 1 == buildLog.getText().count("BuildInfo-URL: unknown")
+assert 1 == buildLog.getText().count("Class-Path: resources/")
+assert 1 == buildLog.getText().count("BuildInfo-Timestamp: ")
+assert 1 == buildLog.getText().count("Main-Class: com.tc.cli.CommandLineMain")
+assert 1 == buildLog.getText().count("BuildInfo-Edition: opensource")

@@ -1,0 +1,57 @@
+<settings xmlns="http://maven.apache.org/POM/4.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <mirrors>
+    <mirror>
+      <id>nexus</id>
+      <name>TC Maven repo on kong - mirror of S3</name>
+      <url>http://nexus.terracotta.eur.ad.sag:8081/content/groups/public</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+  
+  <profiles>
+    <profile>
+      <id>terracotta-repositories</id>
+      <repositories>  
+        <repository>
+          <id>terracotta-snapshots</id>
+          <url>http://snapshots.terracotta.org</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>        
+        <repository>
+          <id>terracotta-releases</id>
+          <url>http://repo.terracotta.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>        
+        <pluginRepository>
+          <id>terracotta-snapshots</id>
+          <url>http://snapshots.terracotta.org</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </pluginRepository>         
+        <pluginRepository>
+          <id>terracotta-releases</id>
+          <url>http://repo.terracotta.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>       
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <!--make the profile active all the time -->
+    <activeProfile>terracotta-repositories</activeProfile>
+  </activeProfiles>
+
+  <pluginGroups>
+    <!-- define the sonatype plugin group, so the nexus plugins will work without typing the groupId -->
+    <pluginGroup>org.sonatype.plugins</pluginGroup>
+  </pluginGroups>
+
+</settings>

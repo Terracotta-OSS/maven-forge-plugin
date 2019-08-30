@@ -1,0 +1,67 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.terracotta.test</groupId>
+  <artifactId>enforcematchingdependenciespom</artifactId>
+  <version>4.0.2</version>
+  <packaging>jar</packaging>
+  <name>Test EnforceMatchingDependenciesMojo</name>
+
+  <properties>
+    <ehcache.version>2.7.2</ehcache.version>
+    <toolkit-api.version>2.2.0</toolkit-api.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+      <version>1.8.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.6.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <version>1.6.6</version>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.ehcache</groupId>
+      <artifactId>management-ehcache-impl</artifactId>
+      <version>2.7.3</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.terracotta</groupId>
+        <artifactId>maven-forge-plugin</artifactId>
+          <version>@pom.version@</version>
+
+        <configuration>
+          <enforceGroupId>net.sf.ehcache</enforceGroupId>
+          <enforceArtifactId>management-ee-ehcache-impl</enforceArtifactId>
+          <enforceVersion>2.7.3</enforceVersion>
+          <!-- this will exclude security-REST, not available in the open source version -->
+          <excludeGroupIds>com.terracotta,org.apache.shiro,gf-3122</excludeGroupIds>
+        </configuration>
+          <executions>
+              <execution>
+                  <id>enforcematchingdependencies</id>
+                  <phase>initialize</phase>
+                  <goals>
+                      <goal>enforceDependencies</goal>
+                  </goals>
+              </execution>
+          </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

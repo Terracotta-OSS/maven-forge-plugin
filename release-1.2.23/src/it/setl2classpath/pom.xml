@@ -1,0 +1,49 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.terracotta.test</groupId>
+  <artifactId>project-depending-on-terracotta</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>Test SetL2ClasspathMojo</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.terracotta</groupId>
+      <artifactId>terracotta</artifactId>
+      <version>4.0.2</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.terracotta</groupId>
+        <artifactId>maven-forge-plugin</artifactId>
+          <version>@pom.version@</version>
+          <configuration>
+          <!--&lt;!&ndash; Specify the MyMojo parameter &ndash;&gt;-->
+          <!--<outputDirectory>target/test-harness/project-to-test</outputDirectory>-->
+        </configuration>
+        <executions>
+          <execution>
+            <id>setl2classpath</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>setl2classpath</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
