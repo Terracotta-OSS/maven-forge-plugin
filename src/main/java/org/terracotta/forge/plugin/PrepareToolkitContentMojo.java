@@ -79,16 +79,6 @@ public class PrepareToolkitContentMojo extends AbstractMojo {
     }
     if (!packagingDir.exists()) throw new MojoExecutionException("Packaging dir not found: " + packagingDir);
 
-    if (Boolean.getBoolean("sag-deps")) {
-      getLog().info("sag-deps=true, scanning embedded jars in " + packagingDir);
-      try {
-        if (Util.isFlaggedByFinder(packagingDir.getAbsolutePath(), finderExclusionList, getLog())) { throw new MojoExecutionException(
-                                                                                                                                                 "Finder found Oracle copyrighted jars"); }
-      } catch (IOException e) {
-        throw new MojoExecutionException(e.getMessage());
-      }
-    }
-
     String buildDirectory = project.getBuild().getOutputDirectory() + File.separator;
     File entriesFile = new File(packagingDir, toolkitContentFilename);
     try {

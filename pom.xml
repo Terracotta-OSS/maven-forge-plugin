@@ -12,7 +12,6 @@
   <properties>
     <java.build.version>1.8</java.build.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <finder.version>3.5.1.0.1</finder.version>
     <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
   </properties>
 
@@ -63,12 +62,6 @@
       <artifactId>junit</artifactId>
       <version>4.12</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.softwareag.ibit.tools.util</groupId>
-      <artifactId>finder</artifactId>
-      <version>${finder.version}</version>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>

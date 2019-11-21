@@ -8,8 +8,6 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
 
-import com.softwareag.ibit.tools.util.Finder;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -117,33 +115,6 @@ public class Util {
       }
     }
     return props;
-  }
-
-  public static boolean isFlaggedByFinder(String file, String exclusionList, Log log) throws IOException {
-    boolean flagged = false;
-    ClassLoader mojoOriginalClassLoader = Thread.currentThread().getContextClassLoader();
-    Thread.currentThread().setContextClassLoader(Finder.class.getClassLoader());
-
-    Finder finder = new Finder();
-//    finder.setPackageOnlySearch(true);
-    finder.setSearchRootDirectory(file);
-//    finder.setUniqueEnabled(true);
-    if (!isEmpty(exclusionList)) {
-      log.info("Scanning with exclusionList: " + exclusionList);
-      finder.setExcludesListFilename(exclusionList);
-    }
-    List<String> resultList = finder.doSearch();
-    if (resultList.size() > 0) {
-      for (String result : resultList) {
-        log.error("Flagged: " + result);
-      }
-      flagged = true;
-    } else {
-      flagged = false;
-    }
-
-    Thread.currentThread().setContextClassLoader(mojoOriginalClassLoader);
-    return flagged;
   }
 
   public static boolean isEmpty(String s) {
