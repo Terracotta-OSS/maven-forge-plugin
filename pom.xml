@@ -44,7 +44,7 @@
     <dependency>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-surefire-plugin</artifactId>
-      <version>3.0.0-M3</version>
+      <version>3.0.0-M4</version>
       <exclusions>
         <exclusion>
           <groupId>org.codehaus.mojo</groupId>
@@ -55,7 +55,7 @@
     <dependency>
       <groupId>org.apache.maven.surefire</groupId>
       <artifactId>surefire-api</artifactId>
-      <version>3.0.0-M3</version>
+      <version>3.0.0-M4</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -133,6 +133,12 @@
       <groupId>com.google.javascript</groupId>
       <artifactId>closure-compiler</artifactId>
       <version>v20131014</version>
+    </dependency>
+<!--    We need this to work with toolchains directly in TerracottaSurefirePlugin-->
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-toolchain</artifactId>
+      <version>3.0-alpha-2</version>
     </dependency>
   </dependencies>
 

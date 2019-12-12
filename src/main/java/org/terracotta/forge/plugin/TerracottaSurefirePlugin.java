@@ -15,6 +15,8 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.surefire.booter.SurefireBooterForkException;
 import org.apache.maven.surefire.suite.RunResult;
+
+import org.apache.maven.toolchain.Toolchain;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
 import org.dom4j.Document;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.mail.Authenticator;
@@ -61,8 +64,70 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   @Parameter(property = "useReflectionFile", defaultValue = "false")
   private boolean useReflectionFile;
 
+  /**
+   * A full toolchain specification block, eg:
+   * <jdk>
+   *     <version>X</version>
+   *     <vendor>Y</vendor>
+   *     ...
+   * </jdk>
+   * All items are optional, if unspecified defaults to normal surefire behavior.
+   * If specified, changes the jdk used by surefire to a matching toolchain in maven's toolchains.xml
+   * If the requirements are not satisfied, fails the build.
+   */
+  @Parameter(alias = "jdk")
+  private Map<String, String> toolchainSpec;
+
+
+  private String jvmFromToolchain;
+
+  /**
+   * Force SurefirePlugin to use our jvm if
+   * <toolchain></toolchain> has been configured explicitly.
+   */
+  @Override
+  public String getJvm() {
+    if (jvmFromToolchain != null) {
+      return jvmFromToolchain;
+    }
+    return super.getJvm();
+  }
+
+  /**
+   * Adds configurable toolchains support, allowing to specify toolchains to
+   * use for just this plugin execution.
+   *
+   * if a <toolchains></toolchains> block is provided in configuration,
+   * find the first matching toolchain and set #jvmFromToolchain so that
+   * our overridden {@link #getJvm()} can return it to SurefirePlugin.
+   *
+   * @throws MojoExecutionException
+   */
+  private void findMatchingToolchain() throws MojoExecutionException {
+
+    if ( toolchainSpec !=null && toolchainSpec.size() > 0 && getToolchainManager() != null ) {
+      List<Toolchain> toolchains = getToolchainManager().getToolchains(getSession(), "jdk", toolchainSpec);
+      if (toolchains.size() > 0) {
+        Toolchain selectedToolchain = toolchains.get(0);
+        jvmFromToolchain = selectedToolchain.findTool("java");
+        if (!new File(jvmFromToolchain).canExecute()) {
+          throw new MojoExecutionException("Identified matching toolchain " + jvmFromToolchain
+                  + " but it is not an executable file");
+        }
+        getLog().info("Using jvm configured via toolchains : " + jvmFromToolchain
+                + " because " + selectedToolchain + " matched " + toolchainSpec);
+      } else {
+        throw new MojoExecutionException("Unable to find a matching toolchain for configuration " + toolchainSpec);
+      }
+    }
+  }
+
+
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
+
+    findMatchingToolchain();
+
     int absoluteTimeoutSecs = 0;
     try {
       absoluteTimeoutSecs = Integer.valueOf(getProject().getProperties().getProperty("absolute-test-timeout-secs"));
