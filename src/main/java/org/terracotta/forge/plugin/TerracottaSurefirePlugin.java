@@ -6,6 +6,7 @@ package org.terracotta.forge.plugin;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.surefire.AbstractSurefireMojo;
 import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugin.surefire.SurefirePlugin;
 import org.apache.maven.plugin.surefire.log.PluginConsoleLogger;
@@ -29,6 +30,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -66,11 +68,11 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
 
   /**
    * A full toolchain specification block, eg:
-   * <jdk>
-   *     <version>X</version>
-   *     <vendor>Y</vendor>
+   * &lt;jdk&gt;
+   *     &lt;version&gt;X&lt;/version&gt;
+   *     &lt;vendor&gt;Y&lt;/vendor&gt;
    *     ...
-   * </jdk>
+   * &lt;/jdk&gt;
    * All items are optional, if unspecified defaults to normal surefire behavior.
    * If specified, changes the jdk used by surefire to a matching toolchain in maven's toolchains.xml
    * If the requirements are not satisfied, fails the build.
@@ -79,19 +81,6 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   private Map<String, String> toolchainSpec;
 
 
-  private String jvmFromToolchain;
-
-  /**
-   * Force SurefirePlugin to use our jvm if
-   * <toolchain></toolchain> has been configured explicitly.
-   */
-  @Override
-  public String getJvm() {
-    if (jvmFromToolchain != null) {
-      return jvmFromToolchain;
-    }
-    return super.getJvm();
-  }
 
   /**
    * Adds configurable toolchains support, allowing to specify toolchains to
@@ -105,7 +94,8 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
    */
   private void findMatchingToolchain() throws MojoExecutionException {
 
-    if ( toolchainSpec !=null && toolchainSpec.size() > 0 && getToolchainManager() != null ) {
+    if ( toolchainSpec != null && toolchainSpec.size() > 0 && getToolchainManager() != null ) {
+      String jvmFromToolchain;
       List<Toolchain> toolchains = getToolchainManager().getToolchains(getSession(), "jdk", toolchainSpec);
       if (toolchains.size() > 0) {
         Toolchain selectedToolchain = toolchains.get(0);
@@ -114,12 +104,26 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
           throw new MojoExecutionException("Identified matching toolchain " + jvmFromToolchain
                   + " but it is not an executable file");
         }
-        getLog().info("Using jvm configured via toolchains : " + jvmFromToolchain
-                + " because " + selectedToolchain + " matched " + toolchainSpec);
+        getLog().info("Setting surefire's jvm to " + jvmFromToolchain
+                + " from toolchain " + selectedToolchain + ", requirements: " + toolchainSpec);
       } else {
         throw new MojoExecutionException("Unable to find a matching toolchain for configuration " + toolchainSpec);
       }
+
+      //unfortunately, current AbstractSurefireMojo.getEffectiveJvm()
+      // accesses the jvm field directly, not through getJvm(),
+      // so we have to hack this:
+      try {
+        Field jvmField = AbstractSurefireMojo.class.getDeclaredField("jvm");
+        jvmField.setAccessible(true);
+        jvmField.set(this, jvmFromToolchain);
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        throw new MojoExecutionException("Unable to set jvm field in superclass to " + jvmFromToolchain, e);
+      }
     }
+
+
+
   }
 
 
