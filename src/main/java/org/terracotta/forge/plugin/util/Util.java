@@ -10,6 +10,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.surefire.AbstractSurefireMojo;
 import org.apache.maven.toolchain.Toolchain;
 import org.apache.maven.toolchain.ToolchainManager;
+import org.apache.maven.toolchain.java.DefaultJavaToolChain;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
 
@@ -135,24 +136,27 @@ public class Util {
    * use for just this plugin execution.
    *
    * if a <toolchains></toolchains> block is provided in configuration,
-   * find the first matching toolchain and set #jvmFromToolchain so that
-   * our overridden {@link #getJvm()} can return it to SurefirePlugin.
+   * find the first matching toolchain and set AbstractSurefireMojo.jvm (private) so that
+   * surefire/failsafe use it during execution.
+   * This also sets JAVA_HOME in test environment to the same JVM
    *
    * @throws MojoExecutionException
    */
   public static void overrideToolchainConfiguration(Map<String, String> toolchainSpec, ToolchainManager manager, MavenSession session, Log logger, AbstractSurefireMojo pluginInstance) throws MojoExecutionException {
 
     if ( toolchainSpec != null && toolchainSpec.size() > 0 && manager != null ) {
-      String jvmFromToolchain;
+      String javaExecutableFromToolchain;
+      String javaHomeFromToolchain;
       List<Toolchain> toolchains = manager.getToolchains(session, "jdk", toolchainSpec);
       if (toolchains.size() > 0) {
         Toolchain selectedToolchain = toolchains.get(0);
-        jvmFromToolchain = selectedToolchain.findTool("java");
-        if (!new File(jvmFromToolchain).canExecute()) {
-          throw new MojoExecutionException("Identified matching toolchain " + jvmFromToolchain
+        javaExecutableFromToolchain = selectedToolchain.findTool("java");
+        javaHomeFromToolchain = ((DefaultJavaToolChain)selectedToolchain).getJavaHome();
+        if (!new File(javaExecutableFromToolchain).canExecute()) {
+          throw new MojoExecutionException("Identified matching toolchain " + javaExecutableFromToolchain
                   + " but it is not an executable file");
         }
-        logger.info("Setting surefire's jvm to " + jvmFromToolchain
+        logger.info("Setting surefire's jvm to " + javaExecutableFromToolchain
                 + " from toolchain " + selectedToolchain + ", requirements: " + toolchainSpec);
       } else {
         throw new MojoExecutionException("Unable to find a matching toolchain for configuration " + toolchainSpec);
@@ -164,9 +168,14 @@ public class Util {
       try {
         Field jvmField = AbstractSurefireMojo.class.getDeclaredField("jvm");
         jvmField.setAccessible(true);
-        jvmField.set(pluginInstance, jvmFromToolchain);
+        jvmField.set(pluginInstance, javaExecutableFromToolchain);
+
+        //we also want to set JAVA_HOME for the test jvm so subprocesses that do odd things
+        //like spawn more jvms will do it right
+        Map<String, String> environmentVariables = pluginInstance.getEnvironmentVariables();
+        environmentVariables.put("JAVA_HOME", javaHomeFromToolchain);
       } catch (NoSuchFieldException | IllegalAccessException e) {
-        throw new MojoExecutionException("Unable to set jvm field in superclass to " + jvmFromToolchain, e);
+        throw new MojoExecutionException("Unable to set jvm field in superclass to " + javaExecutableFromToolchain, e);
       }
     }
   }
