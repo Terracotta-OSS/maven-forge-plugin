@@ -4,7 +4,12 @@
 package org.terracotta.forge.plugin.util;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugin.surefire.AbstractSurefireMojo;
+import org.apache.maven.toolchain.Toolchain;
+import org.apache.maven.toolchain.ToolchainManager;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
 
@@ -13,10 +18,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -120,4 +127,48 @@ public class Util {
   public static boolean isEmpty(String s) {
     return s == null || s.length() == 0;
   }
+
+
+
+  /**
+   * Adds configurable toolchains support, allowing to specify toolchains to
+   * use for just this plugin execution.
+   *
+   * if a <toolchains></toolchains> block is provided in configuration,
+   * find the first matching toolchain and set #jvmFromToolchain so that
+   * our overridden {@link #getJvm()} can return it to SurefirePlugin.
+   *
+   * @throws MojoExecutionException
+   */
+  public static void overrideToolchainConfiguration(Map<String, String> toolchainSpec, ToolchainManager manager, MavenSession session, Log logger, AbstractSurefireMojo pluginInstance) throws MojoExecutionException {
+
+    if ( toolchainSpec != null && toolchainSpec.size() > 0 && manager != null ) {
+      String jvmFromToolchain;
+      List<Toolchain> toolchains = manager.getToolchains(session, "jdk", toolchainSpec);
+      if (toolchains.size() > 0) {
+        Toolchain selectedToolchain = toolchains.get(0);
+        jvmFromToolchain = selectedToolchain.findTool("java");
+        if (!new File(jvmFromToolchain).canExecute()) {
+          throw new MojoExecutionException("Identified matching toolchain " + jvmFromToolchain
+                  + " but it is not an executable file");
+        }
+        logger.info("Setting surefire's jvm to " + jvmFromToolchain
+                + " from toolchain " + selectedToolchain + ", requirements: " + toolchainSpec);
+      } else {
+        throw new MojoExecutionException("Unable to find a matching toolchain for configuration " + toolchainSpec);
+      }
+
+      //unfortunately, current AbstractSurefireMojo.getEffectiveJvm()
+      // accesses the jvm field directly, not through getJvm(),
+      // so we have to hack this:
+      try {
+        Field jvmField = AbstractSurefireMojo.class.getDeclaredField("jvm");
+        jvmField.setAccessible(true);
+        jvmField.set(pluginInstance, jvmFromToolchain);
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        throw new MojoExecutionException("Unable to set jvm field in superclass to " + jvmFromToolchain, e);
+      }
+    }
+  }
+
 }

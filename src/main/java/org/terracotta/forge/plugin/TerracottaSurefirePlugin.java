@@ -6,7 +6,6 @@ package org.terracotta.forge.plugin;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.surefire.AbstractSurefireMojo;
 import org.apache.maven.plugin.surefire.SurefireHelper;
 import org.apache.maven.plugin.surefire.SurefirePlugin;
 import org.apache.maven.plugin.surefire.log.PluginConsoleLogger;
@@ -16,8 +15,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.surefire.booter.SurefireBooterForkException;
 import org.apache.maven.surefire.suite.RunResult;
-
-import org.apache.maven.toolchain.Toolchain;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
 import org.dom4j.Document;
@@ -25,17 +22,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import org.terracotta.forge.plugin.util.Util;
 
 import javax.mail.Authenticator;
 import javax.mail.Message;
@@ -44,7 +31,21 @@ import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
+/**
+ * Adds some functionality to surefire:
+ *  - Set JVM to use from toolchain spec
+ *  - See other params below
+ */
 @Mojo(name = "test", defaultPhase = LifecyclePhase.TEST, threadSafe = true, requiresDependencyResolution = ResolutionScope.TEST)
 public class TerracottaSurefirePlugin extends SurefirePlugin {
 
@@ -81,56 +82,10 @@ public class TerracottaSurefirePlugin extends SurefirePlugin {
   private Map<String, String> toolchainSpec;
 
 
-
-  /**
-   * Adds configurable toolchains support, allowing to specify toolchains to
-   * use for just this plugin execution.
-   *
-   * if a <toolchains></toolchains> block is provided in configuration,
-   * find the first matching toolchain and set #jvmFromToolchain so that
-   * our overridden {@link #getJvm()} can return it to SurefirePlugin.
-   *
-   * @throws MojoExecutionException
-   */
-  private void findMatchingToolchain() throws MojoExecutionException {
-
-    if ( toolchainSpec != null && toolchainSpec.size() > 0 && getToolchainManager() != null ) {
-      String jvmFromToolchain;
-      List<Toolchain> toolchains = getToolchainManager().getToolchains(getSession(), "jdk", toolchainSpec);
-      if (toolchains.size() > 0) {
-        Toolchain selectedToolchain = toolchains.get(0);
-        jvmFromToolchain = selectedToolchain.findTool("java");
-        if (!new File(jvmFromToolchain).canExecute()) {
-          throw new MojoExecutionException("Identified matching toolchain " + jvmFromToolchain
-                  + " but it is not an executable file");
-        }
-        getLog().info("Setting surefire's jvm to " + jvmFromToolchain
-                + " from toolchain " + selectedToolchain + ", requirements: " + toolchainSpec);
-      } else {
-        throw new MojoExecutionException("Unable to find a matching toolchain for configuration " + toolchainSpec);
-      }
-
-      //unfortunately, current AbstractSurefireMojo.getEffectiveJvm()
-      // accesses the jvm field directly, not through getJvm(),
-      // so we have to hack this:
-      try {
-        Field jvmField = AbstractSurefireMojo.class.getDeclaredField("jvm");
-        jvmField.setAccessible(true);
-        jvmField.set(this, jvmFromToolchain);
-      } catch (NoSuchFieldException | IllegalAccessException e) {
-        throw new MojoExecutionException("Unable to set jvm field in superclass to " + jvmFromToolchain, e);
-      }
-    }
-
-
-
-  }
-
-
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
 
-    findMatchingToolchain();
+    Util.overrideToolchainConfiguration(toolchainSpec, getToolchainManager(), getSession(), getLog(), this);
 
     int absoluteTimeoutSecs = 0;
     try {
