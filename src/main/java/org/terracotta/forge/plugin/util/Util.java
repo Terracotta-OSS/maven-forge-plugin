@@ -4,6 +4,8 @@
 package org.terracotta.forge.plugin.util;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
@@ -33,6 +35,9 @@ import java.util.zip.ZipFile;
  * @author hhuynh
  */
 public class Util {
+
+  public static final String LOG_PREFIX = "maven-forge-plugin: ";
+
   /**
    * Run a shell command and return the output as String
    */
@@ -138,7 +143,8 @@ public class Util {
    * if a <toolchains></toolchains> block is provided in configuration,
    * find the first matching toolchain and set AbstractSurefireMojo.jvm (private) so that
    * surefire/failsafe use it during execution.
-   * This also sets JAVA_HOME in test environment to the same JVM
+   * This also sets JAVA_HOME in test environment to the same JVM, but this only works if
+   * the pom adds an <excludedEnvironmentVariables>JAVA_HOME</excludedEnvironmentVariables>
    *
    * @throws MojoExecutionException
    */
@@ -156,7 +162,7 @@ public class Util {
           throw new MojoExecutionException("Identified matching toolchain " + javaExecutableFromToolchain
                   + " but it is not an executable file");
         }
-        logger.info("Setting surefire's jvm to " + javaExecutableFromToolchain
+        logger.debug(LOG_PREFIX + "Setting surefire's jvm to " + javaExecutableFromToolchain
                 + " from toolchain " + selectedToolchain + ", requirements: " + toolchainSpec);
       } else {
         throw new MojoExecutionException("Unable to find a matching toolchain for configuration " + toolchainSpec);
@@ -174,9 +180,21 @@ public class Util {
         //like spawn more jvms will do it right
         Map<String, String> environmentVariables = pluginInstance.getEnvironmentVariables();
         environmentVariables.put("JAVA_HOME", javaHomeFromToolchain);
-      } catch (NoSuchFieldException | IllegalAccessException e) {
-        throw new MojoExecutionException("Unable to set jvm field in superclass to " + javaExecutableFromToolchain, e);
+
+        // we also need to add JAVA_HOME to the excluded list, but getters are  protected/final
+        for(Field f : FieldUtils.getAllFieldsList(pluginInstance.getClass())) {
+          if (f.getName().equals("excludedEnvironmentVariables")) {
+            f.setAccessible(true);
+            String[] newExcludedList = ArrayUtils.add((String[])f.get(pluginInstance), "JAVA_HOME");
+            f.set(pluginInstance, newExcludedList);
+            logger.debug(LOG_PREFIX + "Added JAVA_HOME to excluded list on field " + f + ", now: " + ArrayUtils.toString(f.get(pluginInstance)));
+          }
+        }
+        logger.debug(LOG_PREFIX + "Set JAVA_HOME to " + javaHomeFromToolchain);
+      } catch (Exception e) {
+        throw new MojoExecutionException("Unable to set jvm field in superclass " + pluginInstance.getClass() + " to " + javaExecutableFromToolchain, e);
       }
+      logger.debug(LOG_PREFIX + "environment at this stage: " + pluginInstance.getEnvironmentVariables());
     }
   }
 
