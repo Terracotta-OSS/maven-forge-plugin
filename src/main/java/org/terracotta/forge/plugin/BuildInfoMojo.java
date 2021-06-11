@@ -7,12 +7,12 @@ import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.terracotta.forge.plugin.util.SCMInfo;
 import org.terracotta.forge.plugin.util.Util;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
@@ -26,11 +26,6 @@ import java.util.Properties;
  * @goal buildinfo
  */
 public class BuildInfoMojo extends AbstractMojo {
-  private static final String LAST_CHANGED_REV = "Last Changed Rev";
-
-  private static final String URL              = "URL";
-
-  static final String         UNKNOWN          = "unknown";
 
   /**
    * project instance. Injected automatically by Maven
@@ -80,98 +75,68 @@ public class BuildInfoMojo extends AbstractMojo {
    * 
    */
   public void execute() throws MojoExecutionException {
-    String svnUrl = UNKNOWN;
-    String revision = UNKNOWN;
-    String eeSvnUrl = UNKNOWN;
-    String eeRevision = UNKNOWN;
-    String osSvnUrl = UNKNOWN;
-    String osRevision = UNKNOWN;
 
     if (rootPath == null) {
       rootPath = project.getBasedir().getAbsolutePath();
     }
 
     if (eeRootPath != null && osRootPath != null) { throw new MojoExecutionException(
-                                                                                     "eeRootPath and osRootPath are mutual exclusive. Both cannot be set."); }
+            "eeRootPath and osRootPath are mutual exclusive. Both cannot be set."); }
 
-    try {
-      Properties svnInfo = Util.getSvnInfo(new File(rootPath).getCanonicalPath(), getLog());
-      svnUrl = svnInfo.getProperty(URL, UNKNOWN);
-      revision = svnInfo.getProperty(LAST_CHANGED_REV, UNKNOWN);
-
-      if (eeRootPath != null) {
-        Properties eeSvnInfo = Util.getSvnInfo(new File(eeRootPath).getCanonicalPath(), getLog());
-        eeSvnUrl = eeSvnInfo.getProperty(URL, UNKNOWN);
-        eeRevision = eeSvnInfo.getProperty(LAST_CHANGED_REV, UNKNOWN);
-      }
-
-      if (osRootPath != null) {
-        Properties osSvnInfo = Util.getSvnInfo(new File(osRootPath).getCanonicalPath(), getLog());
-        osSvnUrl = osSvnInfo.getProperty(URL, UNKNOWN);
-        osRevision = osSvnInfo.getProperty(LAST_CHANGED_REV, UNKNOWN);
-      }
-    } catch (IOException ioe) {
-      throw new MojoExecutionException("Error reading svn info", ioe);
-    }
 
     String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
     setBuildInfoProperty("build.timestamp", timestamp);
 
-    if (eeRootPath != null) {
-      setBuildInfoProperty("build.ee.revision", eeRevision);
-      setBuildInfoProperty("build.ee.svn.url", eeSvnUrl);
-      setBuildInfoProperty("build.ee.branch", guessBranchOrTagFromUrl(eeSvnUrl));
-      checkMatchingBranch(guessBranchOrTagFromUrl(svnUrl), guessBranchOrTagFromUrl(eeSvnUrl));
+    SCMInfo scmInfo = null;
+    SCMInfo scmInfoEE = null;
+    SCMInfo scmInfoOS = null;
+    
+    try {
+      String fullRevision = "";
+      scmInfo = Util.getScmInfo(rootPath, getLog());
+      fullRevision = scmInfo.revision;
+      getLog().info(String.format("Determined SCM info: %s, branch %s, revision %s", scmInfo.url, scmInfo.branch, scmInfo.revision));
+      
+      if (eeRootPath != null) {
+        scmInfoEE = Util.getScmInfo(eeRootPath, getLog());
+        setBuildInfoProperties(scmInfoEE, "build.ee");
+        checkMatchingBranch(scmInfo.branch, scmInfoEE.branch);
+        // we use the template EE_REVISION-OS_REVISION
+        if (scmInfoEE.revision != null) {
+          fullRevision = scmInfoEE.revision + "-" + scmInfo.revision;
+        }
+        getLog().info(String.format("Determined SCM info (EE): %s, branch %s, revision %s", scmInfoEE.url, scmInfoEE.branch, scmInfoEE.revision));
+      }
+
+      if (osRootPath != null) {
+        scmInfoOS = Util.getScmInfo(osRootPath, getLog());
+        setBuildInfoProperties(scmInfoOS, "build.os");
+        checkMatchingBranch(scmInfoOS.branch, scmInfo.branch);
+
+        if (scmInfoOS.revision != null) {
+          fullRevision = scmInfo.revision + "-" + scmInfoOS.revision;
+        }
+        getLog().info(String.format("Determined SCM info (OS): %s, branch %s, revision %s", scmInfoOS.url, scmInfoOS.branch, scmInfoOS.revision));
+      }
+
+      getLog().debug("Setting build.revision to " + fullRevision);
+      getLog().debug("Setting build.scm.url to " + scmInfo.url);
+
+      scmInfo.revision = fullRevision;
+      setBuildInfoProperties(scmInfo, "build");
+
+    } catch (IOException ioe) {
+      throw new MojoExecutionException("Error reading scm info", ioe);
     }
 
-    if (osRootPath != null) {
-      setBuildInfoProperty("build.os.revision", osRevision);
-      setBuildInfoProperty("build.os.svn.url", osSvnUrl);
-      setBuildInfoProperty("build.os.branch", guessBranchOrTagFromUrl(osSvnUrl));
-      checkMatchingBranch(guessBranchOrTagFromUrl(osSvnUrl), guessBranchOrTagFromUrl(svnUrl));
-    }
-
-    String fullRevision = revision;
-    // we use the template EE_REVISION-OS_REVISION
-    if (!UNKNOWN.equals(eeRevision)) {
-      fullRevision = eeRevision + "-" + revision;
-    }
-    if (!UNKNOWN.equals(osRevision)) {
-      fullRevision = revision + "-" + osRevision;
-    }
-
-    getLog().debug("Setting build.revision to " + fullRevision);
-    getLog().debug("Setting build.svn.url to " + svnUrl);
-
-    setBuildInfoProperty("build.revision", fullRevision);
-    setBuildInfoProperty("build.svn.url", svnUrl);
-    setBuildInfoProperty("build.branch", guessBranchOrTagFromUrl(svnUrl));
 
     if (generateBuildInfoFile) {
       generateBuildInfoFile();
     }
   }
 
-  private String guessBranchOrTagFromUrl(String url) {
-    if (url.contains("trunk")) return "trunk";
-    int startIndex = url.indexOf("branches/");
-    if (startIndex > 0) {
-      int endIndex = url.indexOf("/", startIndex + 9);
-      if (endIndex < 0) {
-        endIndex = url.length();
-      }
-      return url.substring(startIndex + 9, endIndex);
-    }
-    startIndex = url.indexOf("tags/");
-    if (startIndex > 0) {
-      int endIndex = url.indexOf("/", startIndex + 5);
-      if (endIndex < 0) {
-        endIndex = url.length();
-      }
-      return url.substring(startIndex + 5, endIndex);
-    }
-    return UNKNOWN;
-  }
+
+
 
   private void generateBuildInfoFile() throws MojoExecutionException {
     PrintWriter out = null;
@@ -187,7 +152,18 @@ public class BuildInfoMojo extends AbstractMojo {
     }
   }
 
+  private void setBuildInfoProperties(SCMInfo scmInfo, String prefix) {
+    if (scmInfo != null) {
+      setBuildInfoProperty(prefix + ".revision", scmInfo.revision);
+      setBuildInfoProperty(prefix + ".scm.url", scmInfo.url);
+      setBuildInfoProperty(prefix + ".branch", scmInfo.branch);
+    }
+  }
+
   private void setBuildInfoProperty(String key, String value) {
+    if (value == null) {
+      value = Util.UNKNOWN;
+    }
     buildInfoProps.setProperty(key, value);
     project.getProperties().setProperty(key, value);
   }
@@ -198,7 +174,7 @@ public class BuildInfoMojo extends AbstractMojo {
       return;
     }
     // if the user did not check out the ee branch, it's going to be unknown: we skip the check
-    if (UNKNOWN.equals(eeBranch)) { return; }
+    if (eeBranch == null || Util.UNKNOWN.equals(eeBranch)) { return; }
     // For Ehcache branches, they don't really match 100%
     // Ehcache EE branch: ehcache-core-ee-2.8.x
     // Ehcache OS branch: ehcache-2.8.x

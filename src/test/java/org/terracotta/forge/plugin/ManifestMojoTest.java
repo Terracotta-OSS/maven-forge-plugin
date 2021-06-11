@@ -1,21 +1,31 @@
 package org.terracotta.forge.plugin;
 
 import junit.framework.TestCase;
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.project.MavenProject;
-import org.junit.Assert;
+import org.junit.After;
 import org.junit.Test;
+import org.terracotta.forge.plugin.util.SCMInfo;
+import org.terracotta.forge.plugin.util.Util;
 
 import java.io.File;
-import java.io.FileReader;
 import java.lang.reflect.Field;
-import java.util.Properties;
+import java.util.jar.Manifest;
+
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertTrue;
 
 /**
  * Created by akom on 6/22/16.
  */
-public class ManifestMojoTest {
+public class ManifestMojoTest extends TestBase {
     
     private File outputManifest = new File(getDir("."), "TEST_MANIFEST.MF");
+
+    @After
+    public void cleanUp() {
+        System.clearProperty("SVN_HOME");
+    }
     
     private ManifestMojo fakeMojo() throws Exception {
 
@@ -47,7 +57,11 @@ public class ManifestMojoTest {
         ManifestMojo mojo = fakeMojo();
         System.setProperty("SVN_HOME", getDir("fakesvn-blank").getAbsolutePath());
         mojo.execute();
-        checkManifest("unknown");
+        assertTrue(getFromManifestBuildInfoUrl().contains(".git")); // failed over to git, picked up our own project
+
+        //also run the method directly:
+        SCMInfo svnInfo = Util.getSvnInfo("anything", mojo.getLog());
+        assertEquals(null, svnInfo);
     }
 
     @Test
@@ -55,26 +69,27 @@ public class ManifestMojoTest {
         ManifestMojo mojo = fakeMojo();
         System.setProperty("SVN_HOME", "/totally/bogus");
         mojo.execute();
-        checkManifest("unknown");
+        assertTrue(getFromManifestBuildInfoUrl().contains(".git")); // failed over to git, picked up our own project
+
+        //also run the method directly:
+        SCMInfo svnInfo = Util.getSvnInfo("anything", mojo.getLog());
+        assertEquals(null, svnInfo);
+
     }
 
 
     private void checkManifest(String expectedURL) throws Exception {
-        Properties p = new Properties();
-        p.load(new FileReader(outputManifest));
-
-        Assert.assertTrue(p.containsKey("BuildInfo-URL"));
-        TestCase.assertEquals(expectedURL, p.getProperty("BuildInfo-URL"));
-        
-
+        assertEquals(expectedURL, getFromManifestBuildInfoUrl());
     }
 
-    private File getDir(String subdir) {
-        return new File(getResource("test-pom.xml").getParent(), subdir);
+    private String getFromManifestBuildInfoUrl() throws Exception {
+        return getFromManifest("BuildInfo-URL");
+    }
+    private String getFromManifest(String key) throws Exception {
+        Manifest manifest = new Manifest();
+        manifest.read(FileUtils.openInputStream(outputManifest));
+
+        return manifest.getMainAttributes().getValue("BuildInfo-URL");
     }
 
-    private File getResource(String fileName) {
-        ClassLoader classLoader = getClass().getClassLoader();
-        return new File(classLoader.getResource(fileName).getFile());
-    }
 }

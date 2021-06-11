@@ -6,7 +6,7 @@
     <mirror>
       <id>nexus</id>
       <name>TC Maven repo on kong - mirror of S3</name>
-      <url>http://nexus.terracotta.eur.ad.sag:8081/content/groups/public</url>
+      <url>http://nexus.terracotta.eur.ad.sag/content/groups/public</url>
       <mirrorOf>*</mirrorOf>
     </mirror>
   </mirrors>
@@ -17,13 +17,13 @@
       <repositories>  
         <repository>
           <id>terracotta-snapshots</id>
-          <url>http://snapshots.terracotta.org</url>
+          <url>https://snapshots.terracotta.org</url>
           <releases><enabled>false</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </repository>        
         <repository>
           <id>terracotta-releases</id>
-          <url>http://repo.terracotta.org/maven2</url>
+          <url>https://repo.terracotta.org/maven2</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>false</enabled></snapshots>
         </repository>
@@ -31,13 +31,13 @@
       <pluginRepositories>        
         <pluginRepository>
           <id>terracotta-snapshots</id>
-          <url>http://snapshots.terracotta.org</url>
+          <url>https://snapshots.terracotta.org</url>
           <releases><enabled>false</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </pluginRepository>         
         <pluginRepository>
           <id>terracotta-releases</id>
-          <url>http://repo.terracotta.org/maven2</url>
+          <url>https://repo.terracotta.org/maven2</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>false</enabled></snapshots>
         </pluginRepository>       
