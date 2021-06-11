@@ -15,8 +15,8 @@
  */
 
 //Jenkins integration.
-//See https://svn.terracotta.org/repo/internal/infrastructure/jenkins-pipeline-job-builder/trunk/shared/vars/
-mavenBuild maven_goal: '-V clean deploy  -Ptc-publish,fullmode -Djenkins.publisher=true -Dsag-deps=true'
+// safe to release on commit because we don't build PRs with Jenkins
+mavenBuild.performRelease increment_pom_version_digit: -1 // increment last digit after release
 
 
 
