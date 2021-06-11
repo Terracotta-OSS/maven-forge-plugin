@@ -8,6 +8,7 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.terracotta.forge.plugin.util.SCMInfo;
 import org.terracotta.forge.plugin.util.Util;
 
 import java.io.File;
@@ -21,7 +22,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Attributes.Name;
@@ -194,9 +194,9 @@ public class ManifestMojo extends AbstractMojo {
 
     try {
       getLog().debug("root path " + rootPath);
-      Properties svnInfo = Util.getSvnInfo(new File(rootPath).getCanonicalPath(), getLog());
-      svnUrl = svnInfo.getProperty("URL", UNKNOWN);
-      revision = svnInfo.getProperty("Last Changed Rev", UNKNOWN);
+      SCMInfo scmInfo = Util.getScmInfo(rootPath, getLog());
+      svnUrl = scmInfo.url;
+      revision = scmInfo.revision;
     } catch (IOException ioe) {
       throw new MojoExecutionException("Exception reading svn info", ioe);
     }

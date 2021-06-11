@@ -4,8 +4,6 @@
 package org.terracotta.forge.plugin.util;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
@@ -15,6 +13,9 @@ import org.apache.maven.toolchain.ToolchainManager;
 import org.apache.maven.toolchain.java.DefaultJavaToolChain;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.ExecTask;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -36,7 +38,10 @@ import java.util.zip.ZipFile;
  */
 public class Util {
 
-  public static final String LOG_PREFIX = "maven-forge-plugin: ";
+  public static final String LAST_CHANGED_REV = "Last Changed Rev";
+  public static final String URL              = "URL";
+  public static final String         UNKNOWN          = "unknown";
+
 
   /**
    * Run a shell command and return the output as String
@@ -80,7 +85,21 @@ public class Util {
     return "";
   }
 
-  public static Properties getSvnInfo(String svnRepo, Log log) throws IOException {
+  public static SCMInfo getScmInfo(String svnRepo, Log log) throws IOException {
+
+    SCMInfo scmInfo = getSvnInfo(new File(svnRepo).getCanonicalPath(), log);
+    if (scmInfo != null && scmInfo.url != null) {
+      return scmInfo;
+    }
+
+    scmInfo = getGitInfo(svnRepo, log);
+    if (scmInfo == null) {
+      scmInfo = new SCMInfo(); //not null, for convenine
+    }
+    return scmInfo;
+  }
+
+  public static SCMInfo getSvnInfo(String svnRepo, Log log) throws IOException {
     String svnCommand = "svn";
     String svnHome = System.getenv("SVN_HOME");
     if (svnHome != null) {
@@ -101,7 +120,40 @@ public class Util {
     String result = exec(svnCommand, Arrays.asList("info", svnRepo), null, log);
     log.debug("svn info " + svnRepo + ": " + result);
     return parseSvnInfo(result);
+
   }
+
+
+  public static SCMInfo getGitInfo(String gitRepo, Log log) {
+    SCMInfo result = new SCMInfo();
+
+
+    try (Repository repository = new FileRepositoryBuilder().readEnvironment()
+            .findGitDir(new File(gitRepo)).setMustExist(true).build()) {
+
+      String remoteName = repository.getRemoteNames().stream().filter(name ->
+              Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
+      ).findFirst().orElse(null);
+      if (remoteName == null) {
+        log.info("Failed to find a standard remote name at " + gitRepo);
+        return null;
+      }
+      result.url = repository.getConfig().getString("remote", remoteName, "url");
+      result.branch = repository.getBranch();
+      result.revision = repository.resolve(Constants.HEAD).getName();
+
+    } catch (IllegalArgumentException ix) {
+      // means there is no git repo
+      return null;
+    } catch (Exception e) {
+      log.info("Failed to read git info from " + gitRepo, e);
+      // partial read?  Let's not return partial data
+      return null;
+    }
+
+    return result;
+  }
+
 
   public static String getZipEntries(File file) throws IOException {
     StringBuilder buff = new StringBuilder();
@@ -117,7 +169,7 @@ public class Util {
     }
   }
 
-  public static Properties parseSvnInfo(String svnInfo) throws IOException {
+  public static SCMInfo parseSvnInfo(String svnInfo) throws IOException {
     Properties props = new Properties();
     BufferedReader br = new BufferedReader(new StringReader(svnInfo));
     String line = null;
@@ -127,7 +179,39 @@ public class Util {
         props.put(tokens[0].trim(), tokens[1].trim());
       }
     }
-    return props;
+
+    if (props.size() < 3) {
+      //definitely failed
+      return null;
+    }
+
+    SCMInfo result = new SCMInfo();
+    result.url = props.getProperty(URL, UNKNOWN);
+    result.revision = props.getProperty(LAST_CHANGED_REV, UNKNOWN);
+    result.branch = guessBranchOrTagFromUrl(result.url);
+    return result;
+  }
+
+
+  public static String guessBranchOrTagFromUrl(String url) {
+    if (url.contains("trunk")) return "trunk";
+    int startIndex = url.indexOf("branches/");
+    if (startIndex > 0) {
+      int endIndex = url.indexOf("/", startIndex + 9);
+      if (endIndex < 0) {
+        endIndex = url.length();
+      }
+      return url.substring(startIndex + 9, endIndex);
+    }
+    startIndex = url.indexOf("tags/");
+    if (startIndex > 0) {
+      int endIndex = url.indexOf("/", startIndex + 5);
+      if (endIndex < 0) {
+        endIndex = url.length();
+      }
+      return url.substring(startIndex + 5, endIndex);
+    }
+    return UNKNOWN;
   }
 
   public static boolean isEmpty(String s) {
@@ -143,8 +227,7 @@ public class Util {
    * if a <toolchains></toolchains> block is provided in configuration,
    * find the first matching toolchain and set AbstractSurefireMojo.jvm (private) so that
    * surefire/failsafe use it during execution.
-   * This also sets JAVA_HOME in test environment to the same JVM, but this only works if
-   * the pom adds an <excludedEnvironmentVariables>JAVA_HOME</excludedEnvironmentVariables>
+   * This also sets JAVA_HOME in test environment to the same JVM
    *
    * @throws MojoExecutionException
    */
@@ -162,7 +245,7 @@ public class Util {
           throw new MojoExecutionException("Identified matching toolchain " + javaExecutableFromToolchain
                   + " but it is not an executable file");
         }
-        logger.debug(LOG_PREFIX + "Setting surefire's jvm to " + javaExecutableFromToolchain
+        logger.info("Setting surefire's jvm to " + javaExecutableFromToolchain
                 + " from toolchain " + selectedToolchain + ", requirements: " + toolchainSpec);
       } else {
         throw new MojoExecutionException("Unable to find a matching toolchain for configuration " + toolchainSpec);
@@ -180,21 +263,9 @@ public class Util {
         //like spawn more jvms will do it right
         Map<String, String> environmentVariables = pluginInstance.getEnvironmentVariables();
         environmentVariables.put("JAVA_HOME", javaHomeFromToolchain);
-
-        // we also need to add JAVA_HOME to the excluded list, but getters are  protected/final
-        for(Field f : FieldUtils.getAllFieldsList(pluginInstance.getClass())) {
-          if (f.getName().equals("excludedEnvironmentVariables")) {
-            f.setAccessible(true);
-            String[] newExcludedList = ArrayUtils.add((String[])f.get(pluginInstance), "JAVA_HOME");
-            f.set(pluginInstance, newExcludedList);
-            logger.debug(LOG_PREFIX + "Added JAVA_HOME to excluded list on field " + f + ", now: " + ArrayUtils.toString(f.get(pluginInstance)));
-          }
-        }
-        logger.debug(LOG_PREFIX + "Set JAVA_HOME to " + javaHomeFromToolchain);
-      } catch (Exception e) {
-        throw new MojoExecutionException("Unable to set jvm field in superclass " + pluginInstance.getClass() + " to " + javaExecutableFromToolchain, e);
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        throw new MojoExecutionException("Unable to set jvm field in superclass to " + javaExecutableFromToolchain, e);
       }
-      logger.debug(LOG_PREFIX + "environment at this stage: " + pluginInstance.getEnvironmentVariables());
     }
   }
 
