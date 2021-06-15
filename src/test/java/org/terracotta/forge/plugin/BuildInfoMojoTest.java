@@ -1,18 +1,25 @@
 package org.terracotta.forge.plugin;
 
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.launcher.CommandLauncher;
+import org.apache.commons.exec.launcher.CommandLauncherFactory;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.transport.URIish;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.terracotta.forge.plugin.util.Util;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import static junit.framework.TestCase.assertEquals;
 
@@ -24,13 +31,37 @@ public class BuildInfoMojoTest extends TestBase {
   
   public static String FAKE_GIT_REPO_DIR = "fakegitrepo";
   public static String FAKE_GIT_REPO_SUBDIR = "fakegitrepo/subdir_repo";
+  public static String FAKE_GIT_REPO_WORKTREE = "fakegitworktree";
+  public static File FAKE_GIT_REPO_TMP = new File(SystemUtils.getJavaIoTmpDir(), FAKE_GIT_REPO_DIR);
 
+  @Before
   @After
   public void cleanUp() throws Exception {
     FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_DIR));
+    FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_SUBDIR));
+    FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_WORKTREE));
+    FileUtils.deleteDirectory(FAKE_GIT_REPO_TMP);
     System.clearProperty("SVN_HOME");
   }
 
+  private void runShell(String command, File dir) throws Exception {
+    CommandLauncher launcher = CommandLauncherFactory.createVMLauncher();
+    Process process = launcher.exec(CommandLine.parse(command), null, dir);
+    List<String> stdout = IOUtils.readLines(process.getInputStream(), StandardCharsets.UTF_8);
+    List<String> stderr = IOUtils.readLines(process.getErrorStream(), StandardCharsets.UTF_8);
+    process.waitFor(30, TimeUnit.SECONDS);
+    assertEquals("Failed to execute "
+            + command
+            + ".Output: "
+            + StringUtils.join(stdout, " ")
+            + " STDERR: "
+            + StringUtils.join(stderr, " ")
+            , 0
+            , process.exitValue());
+  }
+  
+  
+  
   private BuildInfoMojo fakeMojo() throws Exception {
     BuildInfoMojo mojo = new BuildInfoMojo();
     MavenProject dummyProject = new MavenProject();
@@ -40,19 +71,37 @@ public class BuildInfoMojoTest extends TestBase {
   }
 
   private void fakeGitRepo(String dir) throws Exception {
+    File mainDir = getDir(dir);
 
-    Git git = Git.init().setDirectory( getDir(dir) ).call();
-    git.remoteAdd().setName("origin").setUri(new URIish("https://an.example/repo.git")).call();
-    assertEquals(1, git.remoteList().call().size());
+    mainDir.mkdirs();
+    runShell("git init " + mainDir.getCanonicalPath(), mainDir);
+    runShell("git remote add origin https://an.example/repo.git", mainDir);
+    runShell("git remote add another https://wrong.example/repo.git", mainDir);
 
     File file = getDir(dir + "/afile.txt");
     FileUtils.write(file, new Random().nextLong() + "junk", StandardCharsets.UTF_8);
-    File childFile = new File(getDir(dir), "subdir1/subdir2/anotherfile.txt");
+    File childFile = new File(mainDir, "subdir1/subdir2/anotherfile.txt");
     FileUtils.forceMkdirParent(childFile);
 
-    git.add().addFilepattern("*.txt").addFilepattern("subdir*").call();
-    git.commit().setCommitter("someone", "some@email.com").setMessage("something").call();
+    runShell("git add *.txt subdir1", mainDir);
+    runShell("git commit -m test", mainDir);
     // now we should have a revision
+  }
+
+  private void fakeGitWorktree(String dir, String worktreeDir) throws Exception {
+    File mainDir = getDir(dir);
+    File worktree = getDir(worktreeDir);
+
+    mainDir.mkdirs();
+    runShell("git init " + mainDir.getCanonicalPath(), mainDir);
+    runShell("git remote add origin https://an.example/repo.git", mainDir);
+    runShell("git remote add another https://wrong.example/repo.git", mainDir);
+    FileUtils.touch(new File(mainDir, "test.txt"));
+    runShell("git add test.txt", mainDir);
+    runShell("git commit -m test", mainDir);
+    runShell("git checkout -b branch2", mainDir);
+    runShell("git checkout master", mainDir);
+    runShell("git worktree add " + worktree.getCanonicalPath() + " branch2", mainDir);
   }
 
   @Test
@@ -119,7 +168,47 @@ public class BuildInfoMojoTest extends TestBase {
     assertEquals("unknown", properties.getProperty("build.branch"));
   }
 
+  @Test
+  public void checkCorrectBuildInfo_from_git_no_branch() throws Exception {
+    fakeGitRepo(FAKE_GIT_REPO_DIR);
+    runShell("git remote remove origin", getDir(FAKE_GIT_REPO_DIR));
+    BuildInfoMojo bm = fakeMojo();
+    setMojoConfig(bm, "rootPath", "/tmp");
+    bm.execute();
 
+    Properties properties = bm.project.getProperties();
+    assertEquals("unknown", properties.getProperty("build.scm.url"));
+    assertEquals("unknown", properties.getProperty("build.branch"));
+  }
+
+
+  @Test
+  public void checkCorrectBuildInfo_from_git_worktree() throws Exception {
+    fakeGitWorktree(FAKE_GIT_REPO_DIR, FAKE_GIT_REPO_WORKTREE);
+    BuildInfoMojo bm = fakeMojo();
+    setMojoConfig(bm, "rootPath", getDir(FAKE_GIT_REPO_WORKTREE).getCanonicalPath());
+    bm.execute();
+
+    Properties properties = bm.project.getProperties();
+    assertEquals("https://an.example/repo.git", properties.getProperty("build.scm.url"));
+    assertEquals("branch2", properties.getProperty("build.branch"));
+  }
+
+  /**
+   * Point the mojo at a tmpdir because otherwise it'll find
+   * maven-forge-plugin git repo
+   */
+  @Test
+  public void checkNoBuildInfo_no_git_repo() throws Exception {
+    FAKE_GIT_REPO_TMP.mkdirs();
+    BuildInfoMojo bm = fakeMojo();
+    setMojoConfig(bm, "rootPath", FAKE_GIT_REPO_TMP.getCanonicalPath());
+    bm.execute();
+
+    Properties properties = bm.project.getProperties();
+    assertEquals("unknown", properties.getProperty("build.scm.url"));
+    assertEquals("unknown", properties.getProperty("build.branch"));
+  }
   @Test
   public void checkMatchingBranchTest_if_ee_branch_version_unknown_should_return() throws MojoExecutionException {
     BuildInfoMojo bm = new BuildInfoMojo();

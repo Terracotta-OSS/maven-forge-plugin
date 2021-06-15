@@ -4,6 +4,7 @@
 package org.terracotta.forge.plugin.util;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
@@ -11,24 +12,19 @@ import org.apache.maven.plugin.surefire.AbstractSurefireMojo;
 import org.apache.maven.toolchain.Toolchain;
 import org.apache.maven.toolchain.ToolchainManager;
 import org.apache.maven.toolchain.java.DefaultJavaToolChain;
-import org.apache.tools.ant.Project;
-import org.apache.tools.ant.taskdefs.ExecTask;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.StringReader;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -44,46 +40,37 @@ public class Util {
 
 
   /**
-   * Run a shell command and return the output as String
+   *
+   * @param command The string will be split by space
+   * @param workdir
+   * @param log
+   * @return lines of stdout as an array or null on any failure
    */
-  public static String exec(String command, List<String> params, File workDir, Log log) {
-    File outputFile;
+  public static List<String> exec(String command, File workdir, Log log) {
+    List<String> output = null;
+    ProcessBuilder builder = new ProcessBuilder(command.split(" "));
+    builder.directory(workdir);
     try {
-      outputFile = File.createTempFile("exec", ".out");
-      outputFile.deleteOnExit();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+      Process process = builder.start();
+      BufferedReader reader = new BufferedReader(
+              new InputStreamReader(process.getInputStream()));
 
-    Project dummyProject = new Project();
-    dummyProject.init();
+      output = IOUtils.readLines(process.getInputStream(), StandardCharsets.UTF_8);
+      List<String> errors = IOUtils.readLines(process.getErrorStream(), StandardCharsets.UTF_8);
 
-    ExecTask execTask = new ExecTask();
-    execTask.setProject(dummyProject);
-    execTask.setOutput(outputFile);
-    execTask.setDir(workDir != null ? workDir : new File(System.getProperty("user.dir")));
-    execTask.setExecutable(command);
-    execTask.setResultProperty("svninfoexitcode");
-    if (params != null) {
-      for (String param : params) {
-        execTask.createArg().setValue(param);
+      process.waitFor(60, TimeUnit.SECONDS);
+      if (process.exitValue() != 0) {
+        log.debug("Exit code " + process.exitValue() + " executing command " + command);
+        log.debug("OUTPUT: " + StringUtils.join(output, "\n") + StringUtils.join(errors, "\n"));
+        return null;
       }
+    } catch (IOException | InterruptedException e) {
+      log.info("Unable to execute command " + command, e);
     }
 
-    FileReader reader = null;
-    try {
-      execTask.execute();
-      reader = new FileReader(outputFile);
-      return IOUtils.toString(reader);
-    } catch (Exception e) {
-      // This should not be terminal, for example if svn is not installed or this is not an svn project
-      log.warn("Unable to use svn info : " + e);
-    } finally {
-      IOUtils.closeQuietly(reader);
-      outputFile.delete();
-    }
-    return "";
+    return output;
   }
+
 
   public static SCMInfo getScmInfo(String svnRepo, Log log) throws IOException {
 
@@ -94,7 +81,7 @@ public class Util {
 
     scmInfo = getGitInfo(svnRepo, log);
     if (scmInfo == null) {
-      scmInfo = new SCMInfo(); //not null, for convenine
+      scmInfo = new SCMInfo(); //not null, for convenince
     }
     return scmInfo;
   }
@@ -117,8 +104,11 @@ public class Util {
       }
     }
 
-    String result = exec(svnCommand, Arrays.asList("info", svnRepo), null, log);
+    List<String> result = exec(svnCommand + " info " + svnRepo, new File(svnRepo), log);
     log.debug("svn info " + svnRepo + ": " + result);
+    if (result == null) {
+      return null;
+    }
     return parseSvnInfo(result);
 
   }
@@ -127,20 +117,44 @@ public class Util {
   public static SCMInfo getGitInfo(String gitRepo, Log log) {
     SCMInfo result = new SCMInfo();
 
+    File gitDir = new File(gitRepo);
 
-    try (Repository repository = new FileRepositoryBuilder().readEnvironment()
-            .findGitDir(new File(gitRepo)).setMustExist(true).build()) {
+    try {
 
-      String remoteName = repository.getRemoteNames().stream().filter(name ->
-              Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
-      ).findFirst().orElse(null);
-      if (remoteName == null) {
-        log.info("Failed to find a standard remote name at " + gitRepo);
-        return null;
+      //find remote url
+      result.url = System.getenv("GIT_URL");
+      if (result.url == null) {
+        List<String> list = Util.exec("git remote -v", gitDir, log);
+        if (list != null) {
+          Map<String, String> remoteMap = list.stream()
+                  .map(elem -> elem.split("[ \t]"))
+                  .collect(Collectors.toMap(e -> e[0], e -> e[1], (match1, match2) -> match1));
+
+          String remoteName = remoteMap.keySet().stream().filter(name ->
+                  Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
+          ).findFirst().orElse(null);
+          if (remoteName != null) {
+            result.url = remoteMap.get(remoteName);
+          } else {
+            result.url = remoteMap.values().stream().findFirst().orElse(null);
+          }
+        }
+        if (result.url == null) {
+          log.debug("Failed to find a standard remote name at " + gitRepo);
+          return null;
+        }
       }
-      result.url = repository.getConfig().getString("remote", remoteName, "url");
-      result.branch = repository.getBranch();
-      result.revision = repository.resolve(Constants.HEAD).getName();
+
+      result.revision = System.getenv("GIT_BRANCH");
+      if (result.revision == null) {
+        result.revision = Util.exec("git rev-parse HEAD", gitDir, log).stream().findFirst().orElse(null);
+      }
+
+      // find branch
+      result.branch = System.getenv("GIT_BRANCH");
+      if (result.branch == null) {
+        result.branch = Util.exec("git rev-parse --abbrev-ref HEAD", gitDir, log).stream().findFirst().orElse(null);
+      }
 
     } catch (IllegalArgumentException ix) {
       // means there is no git repo
@@ -169,25 +183,19 @@ public class Util {
     }
   }
 
-  public static SCMInfo parseSvnInfo(String svnInfo) throws IOException {
-    Properties props = new Properties();
-    BufferedReader br = new BufferedReader(new StringReader(svnInfo));
-    String line = null;
-    while ((line = br.readLine()) != null) {
-      String[] tokens = line.split(":", 2);
-      if (tokens.length == 2) {
-        props.put(tokens[0].trim(), tokens[1].trim());
-      }
-    }
-
-    if (props.size() < 3) {
+  public static SCMInfo parseSvnInfo(List<String> svnInfo) throws IOException {
+    Map<String, String> map = svnInfo.stream()
+            .filter(StringUtils::isNotBlank)
+            .map(elem -> elem.split(":", 2))
+            .collect(Collectors.toMap(e -> e[0].trim(), e -> e[1].trim(), (match1, match2) -> match1));
+    if (map.size() < 3) {
       //definitely failed
       return null;
     }
 
     SCMInfo result = new SCMInfo();
-    result.url = props.getProperty(URL, UNKNOWN);
-    result.revision = props.getProperty(LAST_CHANGED_REV, UNKNOWN);
+    result.url = map.getOrDefault(URL, UNKNOWN);
+    result.revision = map.getOrDefault(LAST_CHANGED_REV, UNKNOWN);
     result.branch = guessBranchOrTagFromUrl(result.url);
     return result;
   }

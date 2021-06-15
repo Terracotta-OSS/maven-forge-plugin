@@ -1,7 +1,7 @@
 package org.terracotta.forge.plugin.util;
 
 public class SCMInfo {
-    public String url;
-    public String branch;
-    public String revision;
+    public String url = Util.UNKNOWN;
+    public String branch = Util.UNKNOWN;
+    public String revision = Util.UNKNOWN;
 }
