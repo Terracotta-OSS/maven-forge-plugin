@@ -3,6 +3,7 @@
  */
 package org.terracotta.forge.plugin.util;
 
+import edu.emory.mathcs.backport.java.util.Collections;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.execution.MavenSession;
@@ -71,10 +72,10 @@ public class Util {
    * @param command The string will be split by space
    * @param workdir
    * @param log
-   * @return lines of stdout as an array or null on any failure
+   * @return lines of stdout as an array or empty list on any failure
    */
   public static List<String> exec(String command, File workdir, Log log) {
-    List<String> output = null;
+    List<String> output = Collections.emptyList();
     ProcessBuilder builder = new ProcessBuilder(command.split(" "));
     builder.directory(workdir);
     try {
@@ -89,7 +90,7 @@ public class Util {
       if (process.exitValue() != 0) {
         log.debug("Exit code " + process.exitValue() + " executing command " + command);
         log.debug("OUTPUT: " + StringUtils.join(output, "\n") + StringUtils.join(errors, "\n"));
-        return null;
+        output = Collections.emptyList();
       }
     } catch (IOException | InterruptedException e) {
       log.info("Unable to execute command " + command, e);
@@ -133,7 +134,7 @@ public class Util {
 
     List<String> result = exec(svnCommand + " info " + svnRepo, new File(svnRepo), log);
     log.debug("svn info " + svnRepo + ": " + result);
-    if (result == null) {
+    if (result.size() == 0) {
       return null;
     }
     return parseSvnInfo(result);
@@ -148,20 +149,18 @@ public class Util {
     try {
 
       //find remote url
-      List<String> list = Util.exec("git remote -v", gitDir, log);
-      if (list != null) {
-        Map<String, String> remoteMap = list.stream()
-                .map(elem -> elem.split("[ \t]"))
-                .collect(Collectors.toMap(e -> e[0], e -> e[1], (match1, match2) -> match1));
+      Map<String, String> remoteMap = Util.exec("git remote -v", gitDir, log)
+              .stream()
+              .map(elem -> elem.split("[ \t]"))
+              .collect(Collectors.toMap(e -> e[0], e -> e[1], (match1, match2) -> match1));
 
-        String remoteName = remoteMap.keySet().stream().filter(name ->
-                Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
-        ).findFirst().orElse(null);
-        if (remoteName != null) {
-          result.url = remoteMap.get(remoteName);
-        } else {
-          result.url = remoteMap.values().stream().findFirst().orElse(null);
-        }
+      String remoteName = remoteMap.keySet().stream().filter(name ->
+              Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
+      ).findFirst().orElse(null);
+      if (remoteName != null) {
+        result.url = remoteMap.get(remoteName);
+      } else {
+        result.url = remoteMap.values().stream().findFirst().orElse(null);
       }
       if (result.url == null) {
         log.debug("Failed to find a standard remote name at " + gitRepo);

@@ -60,7 +60,7 @@ public class ManifestMojoTest extends TestBase {
         assertTrue(getFromManifestBuildInfoUrl().contains(".git")); // failed over to git, picked up our own project
 
         //also run the method directly:
-        SCMInfo svnInfo = Util.getSvnInfo("anything", mojo.getLog());
+        SCMInfo svnInfo = Util.getSvnInfo(getDir(".").getCanonicalPath(), mojo.getLog());
         assertEquals(null, svnInfo);
     }
 
@@ -72,7 +72,7 @@ public class ManifestMojoTest extends TestBase {
         assertTrue(getFromManifestBuildInfoUrl().contains(".git")); // failed over to git, picked up our own project
 
         //also run the method directly:
-        SCMInfo svnInfo = Util.getSvnInfo("anything", mojo.getLog());
+        SCMInfo svnInfo = Util.getSvnInfo(getDir(".").getCanonicalPath(), mojo.getLog());
         assertEquals(null, svnInfo);
 
     }
