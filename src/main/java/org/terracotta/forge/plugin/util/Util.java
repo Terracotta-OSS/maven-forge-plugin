@@ -36,9 +36,9 @@ import java.util.zip.ZipFile;
  */
 public class Util {
 
-  public static final String LAST_CHANGED_REV = "Last Changed Rev";
-  public static final String URL              = "URL";
-  public static final String         UNKNOWN          = "unknown";
+  public static final String SVN_INFO_LAST_CHANGED_REV  = "Last Changed Rev";
+  public static final String SVN_INFO_URL               = "URL";
+  public static final String UNKNOWN                    = "unknown";
 
   /**
    * When disambiguating GIT branches returned by git rev-parse --contains,
@@ -143,56 +143,48 @@ public class Util {
 
   public static SCMInfo getGitInfo(String gitRepo, Log log) {
     SCMInfo result = new SCMInfo();
-
     File gitDir = new File(gitRepo);
 
     try {
 
       //find remote url
-      result.url = System.getenv("GIT_URL");
+      List<String> list = Util.exec("git remote -v", gitDir, log);
+      if (list != null) {
+        Map<String, String> remoteMap = list.stream()
+                .map(elem -> elem.split("[ \t]"))
+                .collect(Collectors.toMap(e -> e[0], e -> e[1], (match1, match2) -> match1));
+
+        String remoteName = remoteMap.keySet().stream().filter(name ->
+                Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
+        ).findFirst().orElse(null);
+        if (remoteName != null) {
+          result.url = remoteMap.get(remoteName);
+        } else {
+          result.url = remoteMap.values().stream().findFirst().orElse(null);
+        }
+      }
       if (result.url == null) {
-        List<String> list = Util.exec("git remote -v", gitDir, log);
-        if (list != null) {
-          Map<String, String> remoteMap = list.stream()
-                  .map(elem -> elem.split("[ \t]"))
-                  .collect(Collectors.toMap(e -> e[0], e -> e[1], (match1, match2) -> match1));
-
-          String remoteName = remoteMap.keySet().stream().filter(name ->
-                  Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
-          ).findFirst().orElse(null);
-          if (remoteName != null) {
-            result.url = remoteMap.get(remoteName);
-          } else {
-            result.url = remoteMap.values().stream().findFirst().orElse(null);
-          }
-        }
-        if (result.url == null) {
-          log.debug("Failed to find a standard remote name at " + gitRepo);
-          return null;
-        }
+        log.debug("Failed to find a standard remote name at " + gitRepo);
+        return null;
       }
 
-      result.revision = System.getenv("GIT_BRANCH");
-      if (result.revision == null) {
-        result.revision = Util.exec("git rev-parse HEAD", gitDir, log).stream().findFirst().orElse(null);
-      }
+      result.revision = Util.exec("git rev-parse HEAD", gitDir, log).stream().findFirst().orElse(null);
 
       // find branch
-      result.branch = System.getenv("GIT_BRANCH");
-      if (result.branch == null) {
-        result.branch = Util.exec("git rev-parse --abbrev-ref HEAD", gitDir, log).stream().findFirst().orElse(null);
-        if ("HEAD".equals(result.branch)) {
-          log.debug("Determining branch from git branch --contains");
-          // this is a detached head situation.  Let's try to guess the branch from "--contains"
-          result.branch = Util.exec("git branch --remote --contains", gitDir, log).stream()
-                  .filter(Objects::nonNull)
-                  .map(branch -> branch.substring(branch.indexOf('/') + 1)) //strip remote name
-                  .filter(branch -> branch.matches(GIT_BRANCH_MATCH_REGEX))
-                  .sorted(GIT_BRANCH_NAME_COMPARATOR)
-                  .findFirst().orElse(null);
-        }
+      result.branch = Util.exec("git rev-parse --abbrev-ref HEAD", gitDir, log).stream().findFirst().orElse(null);
+      if ("HEAD".equals(result.branch)) {
+        log.debug("Determining branch from git branch --contains");
+        // this is a detached head situation.  Let's try to guess the branch from "--contains"
+        result.branch = Util.exec("git branch --remote --contains", gitDir, log).stream()
+                .filter(Objects::nonNull)
+                .map(branch -> branch.substring(branch.indexOf('/') + 1)) //strip remote name
+                .filter(branch -> branch.matches(GIT_BRANCH_MATCH_REGEX))
+                .sorted(GIT_BRANCH_NAME_COMPARATOR)
+                .findFirst().orElse(null);
       }
-
+      if (result.branch == null) {
+        result.branch = System.getenv("GIT_BRANCH");
+      }
 
     } catch (IllegalArgumentException ix) {
       // means there is no git repo
@@ -232,8 +224,8 @@ public class Util {
     }
 
     SCMInfo result = new SCMInfo();
-    result.url = map.getOrDefault(URL, UNKNOWN);
-    result.revision = map.getOrDefault(LAST_CHANGED_REV, UNKNOWN);
+    result.url = map.getOrDefault(SVN_INFO_URL, UNKNOWN);
+    result.revision = map.getOrDefault(SVN_INFO_LAST_CHANGED_REV, UNKNOWN);
     result.branch = guessBranchOrTagFromUrl(result.url);
     return result;
   }
