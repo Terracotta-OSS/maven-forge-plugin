@@ -30,6 +30,7 @@ import static junit.framework.TestCase.assertEquals;
 public class BuildInfoMojoTest extends TestBase {
   
   public static String FAKE_GIT_REPO_DIR = "fakegitrepo";
+  public static String FAKE_GIT_REPO_DIR2 = "fakegitrepo2";
   public static String FAKE_GIT_REPO_SUBDIR = "fakegitrepo/subdir_repo";
   public static String FAKE_GIT_REPO_WORKTREE = "fakegitworktree";
   public static File FAKE_GIT_REPO_TMP = new File(SystemUtils.getJavaIoTmpDir(), FAKE_GIT_REPO_DIR);
@@ -38,6 +39,7 @@ public class BuildInfoMojoTest extends TestBase {
   @After
   public void cleanUp() throws Exception {
     FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_DIR));
+    FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_DIR2));
     FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_SUBDIR));
     FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_WORKTREE));
     FileUtils.deleteDirectory(FAKE_GIT_REPO_TMP);
@@ -82,9 +84,13 @@ public class BuildInfoMojoTest extends TestBase {
     FileUtils.write(file, new Random().nextLong() + "junk", StandardCharsets.UTF_8);
     File childFile = new File(mainDir, "subdir1/subdir2/anotherfile.txt");
     FileUtils.forceMkdirParent(childFile);
+    FileUtils.write(childFile, new Random().nextLong() + "junk", StandardCharsets.UTF_8);
 
-    runShell("git add *.txt subdir1", mainDir);
-    runShell("git commit -m test", mainDir);
+    // make 2 commits
+    runShell("git add afile.txt", mainDir);
+    runShell("git commit -m test1", mainDir);
+    runShell("git add subdir1", mainDir);
+    runShell("git commit -m test2", mainDir);
     // now we should have a revision
   }
 
@@ -179,6 +185,29 @@ public class BuildInfoMojoTest extends TestBase {
     Properties properties = bm.project.getProperties();
     assertEquals("unknown", properties.getProperty("build.scm.url"));
     assertEquals("unknown", properties.getProperty("build.branch"));
+  }
+
+
+  /**
+   * Although we don't make a submodule, in real life a submodule is almost always
+   * in detached head state, so it's hard to guess the branch.
+   * We use FAKE_GIT_REPO_DIR as the remote.
+   */
+  @Test
+  public void checkCorrectBuildInfo_from_git_detached_head() throws Exception {
+    fakeGitRepo(FAKE_GIT_REPO_DIR);
+    File cloneDir = getDir(FAKE_GIT_REPO_DIR2);
+    runShell("git clone " + getDir(FAKE_GIT_REPO_DIR) + " " + cloneDir.getCanonicalPath(), getDir(FAKE_GIT_REPO_DIR).getParentFile());
+    // go back a commit so that we're in detached head
+    runShell("git checkout HEAD~1", cloneDir);
+
+    BuildInfoMojo bm = fakeMojo();
+    setMojoConfig(bm, "rootPath", cloneDir.getCanonicalPath());
+    bm.execute();
+
+    Properties properties = bm.project.getProperties();
+    assertEquals(getDir(FAKE_GIT_REPO_DIR).toString(), properties.getProperty("build.scm.url"));
+    assertEquals("master", properties.getProperty("build.branch"));
   }
 
 

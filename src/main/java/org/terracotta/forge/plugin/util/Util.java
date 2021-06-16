@@ -19,10 +19,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,6 +40,31 @@ public class Util {
   public static final String URL              = "URL";
   public static final String         UNKNOWN          = "unknown";
 
+  /**
+   * When disambiguating GIT branches returned by git rev-parse --contains,
+   */
+  public static final String GIT_BRANCH_MATCH_REGEX = "main|master|release/.*";
+
+  /**
+   * When disambiguating GIT branches returned by git rev-parse --contains,
+   * we want to find the lowest numbered branch, with main being highest.
+   * So we want this order:
+   *    release/4.1
+   *    release/4.3
+   *    main or master
+   */
+  public static final Comparator<String> GIT_BRANCH_NAME_COMPARATOR = new Comparator<String>() {
+    @Override
+    public int compare(String o1, String o2) {
+      if ("main".equals(o1) || "master".equals(o1)) {
+        return 1;
+      }
+      if ("main".equals(o2) || "master".equals(o2)) {
+        return -1;
+      }
+      return o1.compareTo(o2);
+    }
+  };
 
   /**
    *
@@ -154,7 +181,18 @@ public class Util {
       result.branch = System.getenv("GIT_BRANCH");
       if (result.branch == null) {
         result.branch = Util.exec("git rev-parse --abbrev-ref HEAD", gitDir, log).stream().findFirst().orElse(null);
+        if ("HEAD".equals(result.branch)) {
+          log.debug("Determining branch from git branch --contains");
+          // this is a detached head situation.  Let's try to guess the branch from "--contains"
+          result.branch = Util.exec("git branch --remote --contains", gitDir, log).stream()
+                  .filter(Objects::nonNull)
+                  .map(branch -> branch.substring(branch.indexOf('/') + 1)) //strip remote name
+                  .filter(branch -> branch.matches(GIT_BRANCH_MATCH_REGEX))
+                  .sorted(GIT_BRANCH_NAME_COMPARATOR)
+                  .findFirst().orElse(null);
+        }
       }
+
 
     } catch (IllegalArgumentException ix) {
       // means there is no git repo
