@@ -89,7 +89,7 @@ public class GoogleClosureMojo extends AbstractMojo {
     CompilerOptions options = new CompilerOptions();
 
     CompilationLevel.valueOf(compilationLevel).setDebugOptionsForCompilationLevel(options);
-    options.setOutputCharset(charset);
+    options.setOutputCharset(Charset.forName(charset));
     options.setPrettyPrint(prettyPrint);
 
     boolean sourceMapEnabled = sourceMapFile.length() > 0;
@@ -98,8 +98,8 @@ public class GoogleClosureMojo extends AbstractMojo {
       options.setSourceMapFormat(SourceMap.Format.valueOf(sourceMapFormat));
       List<LocationMapping> locMap = new ArrayList<LocationMapping>();
       for (SourceMapLocationMapping sm : locationMappings) {
-        locMap.add(new LocationMapping(sm.prefix.replace('/', File.separatorChar), sm.replacement == null ? ""
-            : sm.replacement));
+        locMap.add(new SourceMap.PrefixLocationMapping(sm.prefix.replace('/', File.separatorChar),
+          sm.replacement == null ? "" : sm.replacement));
       }
       options.setSourceMapLocationMappings(locMap);
     }
@@ -112,7 +112,7 @@ public class GoogleClosureMojo extends AbstractMojo {
     Compiler compiler = new Compiler();
     compiler.compile(closesureExterns, inputs, options);
 
-    if (compiler.hasErrors()) { throw new MojoExecutionException(compiler.getErrors()[0].description); }
+    if (compiler.hasErrors()) { throw new MojoExecutionException(compiler.getErrors().get(0).getDescription()); }
 
     PrintWriter outputFileWriter = null;
     try {
