@@ -16,7 +16,7 @@
 
 //Jenkins integration.
 // safe to release on commit because we don't build PRs with Jenkins
-mavenBuild.performRelease increment_pom_version_digit: -1 // increment last digit after release
+mavenBuild.autoRelease jdk:11, increment_pom_version_digit: -1 // increment last digit after release
 
 
 
