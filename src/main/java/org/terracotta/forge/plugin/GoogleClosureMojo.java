@@ -78,6 +78,12 @@ public class GoogleClosureMojo extends AbstractMojo {
   @Parameter(property = "prettyPrint", defaultValue = "false")
   private boolean                        prettyPrint;
 
+  @Parameter(property = "strictModeInput", defaultValue = "false")
+  private boolean                        strictModeInput;
+
+  @Parameter(property = "emitUseStrict", defaultValue = "false")
+  private boolean                        emitUseStrict;
+
   /**
    * 
    */
@@ -91,6 +97,8 @@ public class GoogleClosureMojo extends AbstractMojo {
     CompilationLevel.valueOf(compilationLevel).setDebugOptionsForCompilationLevel(options);
     options.setOutputCharset(Charset.forName(charset));
     options.setPrettyPrint(prettyPrint);
+    options.setStrictModeInput(strictModeInput);
+    options.setEmitUseStrict(emitUseStrict);
 
     boolean sourceMapEnabled = sourceMapFile.length() > 0;
     if (sourceMapEnabled) {
