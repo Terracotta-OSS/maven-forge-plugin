@@ -110,7 +110,7 @@ public class EnforceMatchingDependenciesMojo extends AbstractMojo {
       Set<Artifact> enforceArtifacts =  new HashSet<Artifact>();
       for (DependencyNode node : nodes) {
         Artifact artifact = node.getArtifact();
-        enforceArtifacts.add(defaultArtifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(),artifact.getScope(),artifact.getType()));
+        enforceArtifacts.add(defaultArtifactFactory.createArtifactWithClassifier(artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), artifact.getType(), artifact.getClassifier()));
       }
 
 
