@@ -4,6 +4,7 @@
 package org.terracotta.forge.plugin;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.filter.CumulativeScopeArtifactFilter;
@@ -115,10 +116,11 @@ public class SetL2ClasspathMojo extends AbstractMojo {
         nodes.remove(rootNode);
         Set<Artifact> terracottaDirectAndTransitiveDependencies =  new TreeSet<Artifact>();
         for (DependencyNode node : nodes) {
-          Artifact nodeArtifact = node.getArtifact();
-          Artifact completeArtifact = defaultArtifactFactory.createArtifact(nodeArtifact.getGroupId(), nodeArtifact.getArtifactId(), nodeArtifact.getVersion(), nodeArtifact.getScope(), nodeArtifact.getType());
-          completeArtifact.setFile(new File(localRepository.getBasedir(), localRepository.pathOf(completeArtifact)));
-          terracottaDirectAndTransitiveDependencies.add(completeArtifact);
+          Artifact completeArtifact = ArtifactUtils.copyArtifactSafe(node.getArtifact());
+          if (completeArtifact != null) {
+            completeArtifact.setFile(new File(localRepository.getBasedir(), localRepository.pathOf(completeArtifact)));
+            terracottaDirectAndTransitiveDependencies.add(completeArtifact);
+          }
         }
         //we end up with the list of artifacts under the root node
 

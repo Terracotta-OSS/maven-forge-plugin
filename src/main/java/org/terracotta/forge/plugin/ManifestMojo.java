@@ -107,7 +107,11 @@ public class ManifestMojo extends AbstractMojo {
             classpath.append(file.getName()).append(" ");
 
             mavenStyleClassPath.append(a.getGroupId() + ":" + a.getArtifactId() + ":" + a.getBaseVersion() + ":"
-                                           + a.getType()).append(" ");
+                + a.getType());
+            if (a.hasClassifier()) {
+              mavenStyleClassPath.append(":" + a.getClassifier());
+            }
+            mavenStyleClassPath.append(" ");
           }
         }
       }
