@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>org.terracotta.forge</groupId>
+    <artifactId>forge-parent</artifactId>
+    <version>9.0</version>
+    <relativePath/>
+  </parent>
+  
   <groupId>org.terracotta</groupId>
   <artifactId>maven-forge-plugin</artifactId>
   <packaging>maven-plugin</packaging>
@@ -14,6 +21,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
     <surefire.version>3.0.0-M7</surefire.version>
+    <!-- don't make an artifactory build-info -->
+    <direct-deploy>true</direct-deploy>
   </properties>
 
   <dependencies>
@@ -285,6 +294,17 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <executions>
+          <!-- forge-parent turns this off -->
+          <execution>
+            <id>default-test</id>
+            <phase>test</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -292,12 +312,10 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>2.5.3</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>3.0.5</version>
           <configuration>
             <findbugsXmlOutput>true</findbugsXmlOutput>
             <xmlOutput>true</xmlOutput>
@@ -307,19 +325,6 @@
     </pluginManagement>
   </build>
 
-  <distributionManagement>
-    <repository>
-      <id>terracotta-releases</id>
-      <name>terracotta-releases</name>
-      <url>http://nexus.terracotta.eur.ad.sag/content/repositories/terracotta-releases</url>
-    </repository>
-    <snapshotRepository>
-      <id>terracotta-snapshots</id>
-      <name>terracotta-snapshots</name>
-      <uniqueVersion>false</uniqueVersion>
-      <url>http://nexus.terracotta.eur.ad.sag/content/repositories/terracotta-snapshots</url>
-    </snapshotRepository>
-  </distributionManagement>
   <scm>
     <connection>scm:git:git@github.com:Terracotta-OSS/maven-forge-plugin.git</connection>
     <developerConnection>scm:git:https://github.com/Terracotta-OSS/maven-forge-plugin.git
