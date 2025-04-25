@@ -17,7 +17,11 @@
 
 //Jenkins integration.
 // safe to release on commit because we don't build PRs with Jenkins
-mavenBuild.autoRelease jdk:11, increment_pom_version_digit: -1 // increment last digit after release
+mavenBuild.autoRelease(
+    mavenBuild.getLegacy4xDefaults() // relying on mirror in settings.xml
+    +
+    [jdk:11, increment_pom_version_digit: -1] // increment last digit after release
+) 
 
 
 

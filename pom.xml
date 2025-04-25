@@ -325,6 +325,23 @@
     </pluginManagement>
   </build>
 
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <id>terracotta-snapshots</id>
+      <url>https://snapshots.terracotta.org/</url>
+    </repository>
+    <repository>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>terracotta-releases</id>
+      <url>https://repo.terracotta.org/maven2</url>
+    </repository>
+  </repositories>
+
   <scm>
     <connection>scm:git:git@github.com:Terracotta-OSS/maven-forge-plugin.git</connection>
     <developerConnection>scm:git:https://github.com/Terracotta-OSS/maven-forge-plugin.git
