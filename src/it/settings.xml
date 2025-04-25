@@ -2,15 +2,6 @@
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
 
-  <mirrors>
-    <mirror>
-      <id>nexus</id>
-      <name>TC Maven repo on kong - mirror of S3</name>
-      <url>http://nexus.terracotta.eur.ad.sag/content/groups/public</url>
-      <mirrorOf>*</mirrorOf>
-    </mirror>
-  </mirrors>
-  
   <profiles>
     <profile>
       <id>terracotta-repositories</id>
