@@ -44,7 +44,6 @@ public class BuildInfoMojoTest extends TestBase {
     FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_SUBDIR));
     FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_WORKTREE));
     FileUtils.deleteDirectory(FAKE_GIT_REPO_TMP);
-    System.clearProperty("SVN_HOME");
   }
 
   private void runShell(String command, File dir) throws Exception {
@@ -107,18 +106,8 @@ public class BuildInfoMojoTest extends TestBase {
     runShell("git add test.txt", mainDir);
     runShell("git commit -m test", mainDir);
     runShell("git checkout -b branch2", mainDir);
-    runShell("git checkout master", mainDir);
+    runShell("git checkout main", mainDir);
     runShell("git worktree add " + worktree.getCanonicalPath() + " branch2", mainDir);
-  }
-
-  @Test
-  public void checkCorrectBuildInfo_from_fake_svn() throws Exception {
-    BuildInfoMojo bm = fakeMojo();
-    System.setProperty("SVN_HOME", getDir("fakesvn-good").getAbsolutePath());
-    bm.execute();
-
-    Properties properties = bm.project.getProperties();
-    assertEquals("https://svn.terracotta.org/repo/forge/some/fake/path", properties.getProperty("build.scm.url"));
   }
 
   @Test
@@ -130,7 +119,7 @@ public class BuildInfoMojoTest extends TestBase {
 
     Properties properties = bm.project.getProperties();
     assertEquals("https://an.example/repo.git", properties.getProperty("build.scm.url"));
-    assertEquals("master", properties.getProperty("build.branch"));
+    assertEquals("main", properties.getProperty("build.branch"));
   }
 
   @Test
@@ -144,7 +133,7 @@ public class BuildInfoMojoTest extends TestBase {
 
     Properties properties = bm.project.getProperties();
     assertEquals("https://an.example/repo.git", properties.getProperty("build.scm.url"));
-    assertEquals("master", properties.getProperty("build.branch"));
+    assertEquals("main", properties.getProperty("build.branch"));
   }
 
   /**
@@ -160,7 +149,7 @@ public class BuildInfoMojoTest extends TestBase {
 
     Properties properties = bm.project.getProperties();
     assertEquals("https://an.example/repo.git", properties.getProperty("build.scm.url"));
-    assertEquals("master", properties.getProperty("build.branch"));
+    assertEquals("main", properties.getProperty("build.branch"));
   }
 
   @Test
@@ -208,7 +197,7 @@ public class BuildInfoMojoTest extends TestBase {
 
     Properties properties = bm.project.getProperties();
     assertEquals(getDir(FAKE_GIT_REPO_DIR).toString(), properties.getProperty("build.scm.url"));
-    assertEquals("master", properties.getProperty("build.branch"));
+    assertEquals("main", properties.getProperty("build.branch"));
   }
 
 
