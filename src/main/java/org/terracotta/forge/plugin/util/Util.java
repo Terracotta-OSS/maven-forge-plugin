@@ -37,9 +37,7 @@ import java.util.zip.ZipFile;
  */
 public class Util {
 
-  public static final String SVN_INFO_LAST_CHANGED_REV  = "Last Changed Rev";
-  public static final String SVN_INFO_URL               = "URL";
-  public static final String UNKNOWN                    = "unknown";
+  public static final String UNKNOWN = "unknown";
 
   /**
    * When disambiguating GIT branches returned by git rev-parse --contains,
@@ -99,60 +97,26 @@ public class Util {
     return output;
   }
 
-
-  public static SCMInfo getScmInfo(String svnRepo, Log log) throws IOException {
-
-    SCMInfo scmInfo = getSvnInfo(new File(svnRepo).getCanonicalPath(), log);
-    if (scmInfo != null && scmInfo.url != null) {
-      return scmInfo;
-    }
-
-    scmInfo = getGitInfo(svnRepo, log);
+  public static SCMInfo getScmInfo(String repo, Log log) throws IOException {
+    SCMInfo scmInfo = getGitInfo(repo, log);
     if (scmInfo == null) {
       scmInfo = new SCMInfo(); //not null, for convenince
     }
     return scmInfo;
   }
 
-  public static SCMInfo getSvnInfo(String svnRepo, Log log) throws IOException {
-    String svnCommand = "svn";
-    String svnHome = System.getenv("SVN_HOME");
-    if (svnHome != null) {
-      svnCommand = svnHome + "/bin/svn";
-    }
-    //This is for ease of testing
-    svnHome = System.getProperty("SVN_HOME");
-    if (svnHome != null) {
-      svnCommand = svnHome + "/bin/svn";
-    }
-
-    if (System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win")) {
-      if (new File(svnCommand + ".bat").exists()) {
-        svnCommand += ".bat";
-      }
-    }
-
-    List<String> result = exec(svnCommand + " info " + svnRepo, new File(svnRepo), log);
-    log.debug("svn info " + svnRepo + ": " + result);
-    if (result.size() == 0) {
-      return null;
-    }
-    return parseSvnInfo(result);
-
-  }
-
-
   public static SCMInfo getGitInfo(String gitRepo, Log log) {
     SCMInfo result = new SCMInfo();
     File gitDir = new File(gitRepo);
 
     try {
-
       //find remote url
-      Map<String, String> remoteMap = Util.exec("git remote -v", gitDir, log)
-              .stream()
-              .map(elem -> elem.split("[ \t]"))
-              .collect(Collectors.toMap(e -> e[0], e -> e[1], (match1, match2) -> match1));
+      List<String> exec = Util.exec("git remote -v", gitDir, log);
+      Map<String, String> remoteMap = exec
+          .stream()
+          .map(elem -> elem.split("[ \t]"))
+          .filter(e -> e.length > 1)
+          .collect(Collectors.toMap(e -> e[0], e -> e[1], (match1, match2) -> match1));
 
       String remoteName = remoteMap.keySet().stream().filter(name ->
               Stream.of("upstream", "origin").anyMatch(it -> it.equals(name))
@@ -197,7 +161,6 @@ public class Util {
     return result;
   }
 
-
   public static String getZipEntries(File file) throws IOException {
     StringBuilder buff = new StringBuilder();
     ZipFile zipFile = new ZipFile(file);
@@ -211,51 +174,6 @@ public class Util {
       zipFile.close();
     }
   }
-
-  public static SCMInfo parseSvnInfo(List<String> svnInfo) throws IOException {
-    Map<String, String> map = svnInfo.stream()
-            .filter(StringUtils::isNotBlank)
-            .map(elem -> elem.split(":", 2))
-            .collect(Collectors.toMap(e -> e[0].trim(), e -> e[1].trim(), (match1, match2) -> match1));
-    if (map.size() < 3) {
-      //definitely failed
-      return null;
-    }
-
-    SCMInfo result = new SCMInfo();
-    result.url = map.getOrDefault(SVN_INFO_URL, UNKNOWN);
-    result.revision = map.getOrDefault(SVN_INFO_LAST_CHANGED_REV, UNKNOWN);
-    result.branch = guessBranchOrTagFromUrl(result.url);
-    return result;
-  }
-
-
-  public static String guessBranchOrTagFromUrl(String url) {
-    if (url.contains("trunk")) return "trunk";
-    int startIndex = url.indexOf("branches/");
-    if (startIndex > 0) {
-      int endIndex = url.indexOf("/", startIndex + 9);
-      if (endIndex < 0) {
-        endIndex = url.length();
-      }
-      return url.substring(startIndex + 9, endIndex);
-    }
-    startIndex = url.indexOf("tags/");
-    if (startIndex > 0) {
-      int endIndex = url.indexOf("/", startIndex + 5);
-      if (endIndex < 0) {
-        endIndex = url.length();
-      }
-      return url.substring(startIndex + 5, endIndex);
-    }
-    return UNKNOWN;
-  }
-
-  public static boolean isEmpty(String s) {
-    return s == null || s.length() == 0;
-  }
-
-
 
   /**
    * Adds configurable toolchains support, allowing to specify toolchains to

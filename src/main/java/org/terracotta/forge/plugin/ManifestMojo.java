@@ -184,7 +184,7 @@ public class ManifestMojo extends AbstractMojo {
   private void addBuildAttributes(Attributes attributes) throws MojoExecutionException {
     final String UNKNOWN = "unknown";
     final String BUILDINFO = "BuildInfo-";
-    String svnUrl = UNKNOWN;
+    String url = UNKNOWN;
     String revision = UNKNOWN;
 
     String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
@@ -199,13 +199,13 @@ public class ManifestMojo extends AbstractMojo {
     try {
       getLog().debug("root path " + rootPath);
       SCMInfo scmInfo = Util.getScmInfo(rootPath, getLog());
-      svnUrl = scmInfo.url;
+      url = scmInfo.url;
       revision = scmInfo.revision;
     } catch (IOException ioe) {
-      throw new MojoExecutionException("Exception reading svn info", ioe);
+      throw new MojoExecutionException("Exception reading SCM info", ioe);
     }
 
-    attributes.putValue(BUILDINFO + "URL", svnUrl);
+    attributes.putValue(BUILDINFO + "URL", url);
     attributes.putValue(BUILDINFO + "Revision", revision);
   }
 }

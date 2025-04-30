@@ -18,9 +18,9 @@ import java.util.Date;
 import java.util.Properties;
 
 /**
- * Collect build info of the current project. Default rootPath is ${project.basedir}. This is used to get svn info The
- * plugin will set these system properties "build.revision" == from svn info "Last Change Rev" "build.svn.url" == from
- * svn info "URL" "build.timestamp"
+ * Collect build info of the current project. Default rootPath is ${project.basedir}. This is used to get SCM info.
+ * The plugin will set these system properties: "<build>.revision", "<build>.scm.url", "<build>.branch",
+ * and "<build>.timestamp", where "<build>" is one of "build.ee" | "build.os"
  * 
  * @author hhuynh
  * @goal buildinfo
@@ -185,6 +185,6 @@ public class BuildInfoMojo extends AbstractMojo {
 
     if (!os.equals(ee)) { throw new MojoExecutionException("branch doesn't match between EE (" + eeBranch
                                                            + ") and OS (" + osBranch
-                                                           + "). Check your svn:externals property"); }
+                                                           + "). Check your GIT submodule property"); }
   }
 }
