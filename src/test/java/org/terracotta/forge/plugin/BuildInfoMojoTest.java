@@ -30,7 +30,6 @@ import static junit.framework.TestCase.assertEquals;
 
 public class BuildInfoMojoTest extends TestBase {
   
-  public static String FAKE_GIT_REPO_DIR = "fakegitrepo";
   public static String FAKE_GIT_REPO_DIR2 = "fakegitrepo2";
   public static String FAKE_GIT_REPO_SUBDIR = "fakegitrepo/subdir_repo";
   public static String FAKE_GIT_REPO_WORKTREE = "fakegitworktree";
@@ -46,24 +45,6 @@ public class BuildInfoMojoTest extends TestBase {
     FileUtils.deleteDirectory(FAKE_GIT_REPO_TMP);
   }
 
-  private void runShell(String command, File dir) throws Exception {
-    CommandLauncher launcher = CommandLauncherFactory.createVMLauncher();
-    Process process = launcher.exec(CommandLine.parse(command), null, dir);
-    List<String> stdout = IOUtils.readLines(process.getInputStream(), StandardCharsets.UTF_8);
-    List<String> stderr = IOUtils.readLines(process.getErrorStream(), StandardCharsets.UTF_8);
-    process.waitFor(30, TimeUnit.SECONDS);
-    assertEquals("Failed to execute "
-            + command
-            + ".Output: "
-            + StringUtils.join(stdout, " ")
-            + " STDERR: "
-            + StringUtils.join(stderr, " ")
-            , 0
-            , process.exitValue());
-  }
-  
-  
-  
   private BuildInfoMojo fakeMojo() throws Exception {
     BuildInfoMojo mojo = new BuildInfoMojo();
     MavenProject dummyProject = new MavenProject();
@@ -72,34 +53,12 @@ public class BuildInfoMojoTest extends TestBase {
     return mojo;
   }
 
-  private void fakeGitRepo(String dir) throws Exception {
-    File mainDir = getDir(dir);
-
-    mainDir.mkdirs();
-    runShell("git init " + mainDir.getCanonicalPath(), mainDir);
-    runShell("git remote add origin https://an.example/repo.git", mainDir);
-    runShell("git remote add another https://wrong.example/repo.git", mainDir);
-
-    File file = getDir(dir + "/afile.txt");
-    FileUtils.write(file, new Random().nextLong() + "junk", StandardCharsets.UTF_8);
-    File childFile = new File(mainDir, "subdir1/subdir2/anotherfile.txt");
-    FileUtils.forceMkdirParent(childFile);
-    FileUtils.write(childFile, new Random().nextLong() + "junk", StandardCharsets.UTF_8);
-
-    // make 2 commits
-    runShell("git add afile.txt", mainDir);
-    runShell("git commit -m test1", mainDir);
-    runShell("git add subdir1", mainDir);
-    runShell("git commit -m test2", mainDir);
-    // now we should have a revision
-  }
-
   private void fakeGitWorktree(String dir, String worktreeDir) throws Exception {
     File mainDir = getDir(dir);
     File worktree = getDir(worktreeDir);
 
     mainDir.mkdirs();
-    runShell("git init " + mainDir.getCanonicalPath(), mainDir);
+    runShell("git init -b main " + mainDir.getCanonicalPath(), mainDir);
     runShell("git remote add origin https://an.example/repo.git", mainDir);
     runShell("git remote add another https://wrong.example/repo.git", mainDir);
     FileUtils.touch(new File(mainDir, "test.txt"));

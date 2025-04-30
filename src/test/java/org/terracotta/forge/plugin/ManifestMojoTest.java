@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 import java.util.jar.Manifest;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.project.MavenProject;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertEquals;
@@ -15,6 +17,12 @@ import static junit.framework.TestCase.assertEquals;
 public class ManifestMojoTest extends TestBase {
     
     private File outputManifest = new File(getDir("."), "TEST_MANIFEST.MF");
+
+    @Before
+    @After
+    public void cleanUp() throws Exception {
+        FileUtils.deleteDirectory(getDir(FAKE_GIT_REPO_DIR));
+    }
 
     private ManifestMojo fakeMojo() throws Exception {
         outputManifest.delete();
@@ -33,9 +41,12 @@ public class ManifestMojoTest extends TestBase {
 
     @Test
     public void checkBuildInfoURL() throws Exception {
+        fakeGitRepo(FAKE_GIT_REPO_DIR);
         ManifestMojo mojo = fakeMojo();
+        setMojoConfig(mojo, "rootPath", getDir(FAKE_GIT_REPO_DIR).getCanonicalPath());
         mojo.execute();
-        String expectedBuildInfoURL = "git@github.com:Terracotta-OSS/maven-forge-plugin.git";
+
+        String expectedBuildInfoURL = "https://an.example/repo.git";
         assertEquals(expectedBuildInfoURL, getFromManifest("BuildInfo-URL"));
     }
 
